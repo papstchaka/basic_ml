@@ -426,3 +426,201 @@ class clustering:
         ## be sure y_test is array
         y_test = np.array(y_test)
         return y_test
+    
+class dimension_reduction:
+    '''
+    class that implements different approaches of dimensionality reduction:
+        - LDA: Linear Discriminant Analysis
+        - PCA: Principal Component Analysis
+    '''
+    
+    def __init__(self) -> None:
+        '''
+        constructor of class
+        initializes:
+            - W for transformation to 0
+            - X as Train Data to emtpy numpy array
+        Returns:
+            - None
+        '''
+        self.W = 0
+        self.X = np.array([])
+        pass
+    
+    def calc_mean(self, X:np.array, verbose:int) -> np.array:
+        '''
+        calculates the means of the classes
+        Parameters:
+            - X: Train Data [numpy.array]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - means: calculated means [numpy.array]
+        '''
+        means = np.mean(X,axis=0)
+        if verbose>0:
+            print(f'Mean of data:\n{means}')
+        return means
+    
+    def calc_sw(self, means:np.array, verbose:int) -> np.array:
+        '''
+        calculates scatter matrix S_W of the classes with given means
+        Parameters:
+            - means: means of classes [numpy.array]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - S_W: calculated scatter matrix [numpy.array]
+        '''
+        if len(self.X.shape)>2:
+            S_W = np.zeros((len(self.X),len(self.X)))
+            for i,class_data in enumerate(self.X):
+                ## scatter matrix for every class
+                class_sc_mat = np.zeros((len(self.X),len(self.X)))
+                for point in class_data:
+                    ## make column vector
+                    point, cv = point.reshape(len(self.X),1), means[i].reshape(len(self.X),1)
+                    class_sc_mat += (point-cv).dot((point-cv).T)
+                ## sum up all scatter matrizes
+                S_W += class_sc_mat
+        else:
+            S_W = np.zeros((2,2))
+            for point in self.X:
+                ## make column vector
+                point, cv = point.reshape(-1,1), means.reshape(-1,1)
+                S_W += (point-cv).dot((point-cv).T)
+        if verbose>0:
+            print(f'within-class Scatter Matrix:\n{S_W}')
+        return S_W
+    
+    def calc_cov(self, verbose:int) -> np.array:
+        '''
+        calculates covariance of Train Data
+        Parameters:
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - cov: calculate covariance matrix [numpy.array]
+        '''
+        X = [x.reshape(1,-1) for x in self.X]
+        cov = (1 / len(self.X)) * sum( [x.T * x for x in X] )
+        if verbose>0:
+            print(f'Covariance Matrix:\n{cov}')
+        return cov
+    
+    def calc_eig_vals(self, S_W:np.array, S_B:np.array, verbose:int) -> list: 
+        '''
+        calculates (eigenvalue, eigenvector)-pairs for given scatter- and covariance matrix
+        Parameters:
+            - S_W: given scatter matrix [numpy.array]
+            - S_B: given covariance matrix [numpy.array]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - eig_pairs: sorted list with calculated (eigenvalue, eigenvector pairs) - descending [numpy.array]
+        '''
+        ## get eigenvalues and eigenvectors
+        eig_vals, eig_vecs = np.linalg.eig(np.linalg.inv(S_W).dot(S_B))
+        # Make a list of (eigenvalue, eigenvector) tuples
+        eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:,i]) for i in range(len(eig_vals))]
+        # Sort the (eigenvalue, eigenvector) tuples from high to low
+        eig_pairs = sorted(eig_pairs, key=lambda k: k[0], reverse=True)
+        if verbose>0:
+            for i in range(len(eig_vals)):
+                eigv = eig_vecs[:,i].reshape(len(S_B),1)
+                np.testing.assert_array_almost_equal(np.linalg.inv(S_W).dot(S_B).dot(eigv),
+                                                     eig_vals[i] * eigv,
+                                                     decimal=6, err_msg='', verbose=True)
+            print('eigenvalues correct')
+            # Visually confirm that the list is correctly sorted by decreasing eigenvalues
+            print('Variance explained:')
+            eigv_sum = sum(eig_vals)
+            for i,j in enumerate(eig_pairs):
+                print(f'eigenvalue {i+1}: {(j[0]/eigv_sum).real:.2f}%')
+        return eig_pairs
+    
+    def calc_W(self, eig_pairs:np.array, dim:int, verbose:int) -> np.array:
+        '''
+        calculate transforming vector for pca given (eigenvalue, eigenvector)-pairs
+        Parameters:
+            - eig_pairs: sorted list with calculated (eigenvalue, eigenvector pairs) - descending [numpy.array]
+            - dim: desired dimension of projected data [Integer]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        '''
+        W = np.hstack([eig_pairs[i][1].reshape(len(eig_pairs),1) for i in range(dim)])
+        if verbose>0:
+            print(f'Matrix W:\n{W.real}')
+        return W
+                      
+    def lda(self, X:np.array, verbose:int = 0) -> None:
+        '''
+        trains the lda projection for further predictions
+        Parameters:
+            - X: Train Data [numpy.array]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - None
+        '''
+        self.X = X
+        ## calculate the means of the classes
+        means = np.array([self.calc_mean(x, verbose) for x in X])
+        ## calculate the scatter matrix of the data
+        S_W = self.calc_sw(means, verbose)
+        ## calculate transforming vector
+        self.W = np.linalg.inv(S_W).dot(means[0]-means[1])
+        
+    def pca(self, X:np.array, dim:int, verbose:int = 0) -> None:
+        '''
+        trains the pca for further transformation
+        Parameters:
+            - X: Train Data [numpy.array]
+            - dim: desired dimension of projected data [Integer]
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+        Returns:
+            - None
+        '''
+        ## calc mean
+        mean = self.calc_mean(X, verbose)
+        ## make data zero mean
+        self.X = X - mean
+        ## calc covariance matrix
+        cov = self.calc_cov(verbose)
+        ## calc scatter matrix
+        S_W = self.calc_sw(mean, verbose)
+        ## calc (eigenvalue, eigenvector)-pairs
+        eig_pairs = self.calc_eig_vals(S_W, cov, verbose)
+        self.W = self.calc_W(eig_pairs, dim, verbose)
+    
+    def transform(self, x_test:np.array) -> np.array:
+        '''
+        function to transform given data point
+        Parameters:
+            - x_test: point to transform and predict [numpy.array]
+        Returns:
+            - transformed data point [numpy.array]
+        '''
+        return x_test.dot(self.W)
+    
+    def predict(self, x_test:np.array) -> np.array:
+        '''
+        transforms given data point and gives a class prediction using 1-nearest-classifier
+        Parameters:
+            - x_test: point to transform and predict [numpy.array]
+        Returns:
+            - class label (0,1,..,n) of transformed and classified data point [numpy.array]
+        '''
+        ## transform data point
+        x_test = self.transform(x_test)
+        ## calculate distances to all different classes
+        dist = [min([ np.linalg.norm(x_test - c.dot(self.W)) for c in label ]) for label in self.X]    
+        return np.argmin(dist)
