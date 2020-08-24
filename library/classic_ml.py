@@ -2,6 +2,7 @@ import numpy as np
 from heapq import nsmallest, nlargest
 import plotly.offline as py
 import plotly.graph_objs as go
+import itertools
 
 class linear_regression:
     '''
@@ -770,7 +771,7 @@ class gmm:
         ## fit pdfs
         for _ in range(max_iter):
             ## plot data
-#             self.plot_pdf(xs, mus, sigmas)
+            self.plot_pdf(xs, mus, sigmas)
             ll_new = 0
             ## E-Step - calculate responsibilities
             thetas = np.zeros((l,n))
@@ -829,3 +830,93 @@ class gmm:
         ## get the corresponding label (the one with the highest responsibility)
         label = np.argmax([np.sum(x) for x in responsibilities])
         return label
+    
+class gp:
+    '''
+    class that implements gaussian processes as regression algorithm 
+    '''
+    
+    def __init__(self):
+        '''
+        constructor of class
+        initializes:
+            - None
+        Returns:
+            - None
+        '''
+        pass
+    
+    def kernel_function(self, x1:float, x2:float, sigma:float, l:float, mode:str, training:bool = False) -> float:
+        '''
+        return the K Matrix of the corresponding kernel function using given data points
+        Parameters:
+            - x1: data point of first set [Float]
+            - x2: data point of second set [Float]
+            - sigma: noise constant to add [Float]
+            - l: lenghtscale of GP [Float]
+            - mode: which kind of kernel to use. Possible values are [String]
+                - rbf: Radial Basis Function
+            - training: whether training (= True) mode or prediction mode (= False) [Boolean, default = False]
+        Returns:
+            - kernel_val: Value of used Kernel Function [Float]
+        '''
+        noise = 0
+        ## when training and only for equal data points
+        if training and (x1 == x2):
+            noise = sigma
+        if mode == "rbf":
+            return np.exp(- (np.linalg.norm(x1 - x2)**2 / (2 * l**2))) + noise
+        return np.nan
+    
+    def calc_kernel(self, x:np.array, x_star:np.array, sigma:float, l:float, mode:str) -> tuple:
+        '''
+        calculates the kernel matrizes K, K* and K** given training and test data
+        Parameters:
+            - x: training data points [numpy.array]
+            - x_star: testing data points [numpy.array]
+            - sigma: noise constant to add [Float]
+            - l: lenghtscale of GP [Float]
+            - mode: which kind of kernel to use. Possible values are [String]
+                - rbf: Radial Basis Function
+        Returns:
+            - (K, K*, K**): tuple of calculated kernel matrizes [tuple]
+        '''
+        ## calc K and reshape it
+        k = np.array([self.kernel_function(i,j, sigma, l, mode, True) for (i,j) in itertools.product(x,x)]).reshape(len(x),len(x))
+        ## calc K* and reshape it
+        k_star = np.array([self.kernel_function(i,j, sigma, l, mode) for (i,j) in itertools.product(x_star,x)]).reshape(len(x_star),len(x))
+        ## calc K** and reshape it
+        k_2star = np.array([self.kernel_function(i,j, sigma, l, mode) for (i,j) in itertools.product(x_star,x_star)]).reshape(len(x_star),len(x_star))
+        return (k, k_star, k_2star)
+    
+    def train(self, x:np.array, x_test:np.array, y:np.array, sigma:float, l:float, mode:str = "rbf", return_cov=False) -> tuple:
+        '''
+        training function for Gaussian Process given x and y data. Also predicts the regressed value(s) for given x_test
+        Parameters:
+            - x: training data points [numpy.array]
+            - x_test: testing data points [numpy.array]
+            - y: training labels [numpy.array]
+            - sigma: noise constant to add [Float]
+            - l: lenghtscale of GP [Float]
+            - mode: which kind of kernel to use. Possible values are [String]
+                - rbf: Radial Basis Function (default)
+            - return_cov: whether (= True) or not (= False) return the covariance of GP [Boolean, default=False]
+        Returns:
+            if return_cov == True:
+                - (y_test, covariance): tuple of regressed y_test and covariance [tuple]
+            else:
+                - y_test: regressed y_test [numpy.array]
+        '''
+        ## make sure x, x_test and y are numpy.arrays
+        x, x_test, y = np.array(x), np.array(x_test), np.array(y)
+        ## calc all kernel matrizes
+        k, k_star, k_2star = self.calc_kernel(x,x_test,sigma,l,mode)
+        ## get shape of x
+        n = k.shape[0]
+        ## get regressed y_test
+        y_test = np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), (y.reshape([n, 1]))))
+        ## calc covariance
+        if return_cov:
+            covariance = k_2star - np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), k_star.T))
+            return (y_test, covariance)
+        return y_test
