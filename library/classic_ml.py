@@ -5,7 +5,7 @@ import plotly.graph_objs as go
 import itertools
 
 '''
-implements all "classic" Machine Learning algorithms excluding Reinforcement Learning and Deep Learning
+implements all "classic" Machine Learning lgorithms excluding Reinforcement Learning and Deep Learning
 '''
 
 class linear_regression:
