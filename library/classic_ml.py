@@ -4,6 +4,10 @@ import plotly.offline as py
 import plotly.graph_objs as go
 import itertools
 
+'''
+implements all "classic" Machine Learning algorithms excluding Reinforcement Learning and Deep Learning
+'''
+
 class linear_regression:
     '''
     class that implements different approaches to do single dimensional or multidimensional linear regression:
