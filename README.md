@@ -18,6 +18,7 @@ which can be installed via
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm <a href="https://scikit-learn.org/stable/modules/generated/sklearn.mixture.GaussianMixture.html" target="_blank">`GMM with EM by sklearn`</a>
 >   - Gaussian Processes Regression <a href="https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html" target="_blank">`GP by sklearn`</a>
 >   - Reinforcement Learning <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
+>   - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
 
 ## Usage:
 In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training` and a `predict` function. `score` functionality will be added later.
@@ -31,6 +32,7 @@ Algorithms that work exactly as describe above:
 Algorithms with different work-wise:
 >   - Gaussian Processes --> training and prediction are inseperable from each other and because of that implemented in one function (named `train`). To use GPs, you have to provide `x_train`, `y_train` and `x_test` all to this function. It fits the algorithm and returns the regressed `y_test`.
 >   - Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train` function implemented, since the user is obliged to self-decide whether or not to use `Q-Learning` or `Action-Value-Iteration`.
+>   - Hidden Markov Models: As they need a sequence to be trained and initial states and observations, the class is used slightly different to `sklearn`-typical work wise. You have to provide a sequence to all of the implemented algorithms, further instructions can be found on top of the class description in the <a href="library/reinforcement.py" target="_blank">`reinforcement.py script`</a>.
 
 ## Supporting developers:
 > -   <a href="https://github.com/papstchaka" target="_blank">`Alexander Christoph`</a>
