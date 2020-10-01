@@ -18,8 +18,9 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/classic_ml.py" target="_blank">`classic_ml.py`</a> contains all "classic" Machine Learning algorithms excluding Reinforcement Learning and Deep Learning
 >   - <a href="library/reinforcement_learning.py" target="_blank">`reinforcement_learning.py`</a> contains Reinforcement Learning algorithms
 >   - <a href="library/deep_learning.py" target="_blank">`deep_learning.py`</a> contains Deep Learning using Neural Networks
+>   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
 
-## Functionalities that are already implemented (state of 22.09.2020):
+## Functionalities that are already implemented (state of 01.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
 >   - Clustering (with more or less working dendrogram building function - still a few bugs in it) <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
 >   - Dimension Reduction Algorithms (LDA and PCA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
@@ -28,6 +29,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - Reinforcement Learning <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
 >   - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
 >   - Deep Learning using Neural Networks <a href="https://www.tensorflow.org/tutorials/keras/classification" target="_blank">`Deep Learning by Tensorflow`</a>
+>   - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
 
 ## Usage:
 In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training` and a `predict` function. `score` functionality will be added later.
@@ -38,6 +40,7 @@ Algorithms that work exactly as describe above:
 >   - Dimension Reduction
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm
 >   - Deep Learning using Neural Networks
+>   - Genetic Algorithm for DataSet manipulation
 
 Algorithms with different work-wise:
 >   - Gaussian Processes --> training and prediction are inseperable from each other and because of that implemented in one function (named `train`). To use GPs, you have to provide `x_train`, `y_train` and `x_test` all to this function. It fits the algorithm and returns the regressed `y_test`.
