@@ -249,74 +249,92 @@ class clustering:
         self.labels = np.array(labels).astype(str)
         self.cluster_centers = np.array(cluster_centers)
         
-    def matrix_helper(self, point:float, matched_clusters:np.array, mode:str="") -> float:
+    def linkage(self, data:np.array, mode:str) -> np.array:
         '''
         helper function to determine the right distance triggered by desired mode
         Parameters:
-            - point: Point to determine the distance to [Float]
-            - matched_clusters: all points to determine the distance to [numpy.array]
-            - mode: desired linkage type [String, default=""]
+            - data: data to determine the linkage distance from - two rows of the matrix [numpy.array]
+            - mode: desired linkage type. Possible values are [String]
+                - "single-linkage"
+                - "full-linkage"
+                - "average"
         Returns:
-            - val: distance value [Float]
+            - new_vals: array with the new values (depeding on the mode) [numpy.array]
         '''
         if mode == "single-linkage":
-            val = np.min([np.linalg.norm(point-punto) for punto in matched_clusters])
+            new_vals = np.min(data, axis=0)
         elif mode == "full-linkage":
-            val = np.max([np.linalg.norm(point-punto) for punto in matched_clusters])
+            new_vals = np.max(data, axis=0)
         elif mode == "average":
-            val = np.mean([np.linalg.norm(point-punto) for punto in matched_clusters])
+            new_vals = np.mean(data, axis=0)
         else:
             ## if the desired linkage type is not implemented
-            print("this linkage does not exist")
-            val = np.infty
-        return val
+            print("this linkage does not exist! Single Linkage will be used")
+            new_vals = np.min(data, axis=0)
+        return new_vals
 
-    def make_distance_matrix(self, unmatched_clusters:np.array, matched_clusters:np.array=np.array([]), mode:str="") -> np.array:
+    def recalc_matrix(self, matrix:np.array, matched_clusters:np.array, mode:str) -> tuple:
         '''
-        function to determine the distance matrix needed for the Z-Matrix
+        helper function to determine the right distance triggered by desired mode
         Parameters:
-            - unmatched_clusters: data of clusters which shall not be merged now [numpy.array]
-            - matched_clusters: data of clusters which shall be merged now [numpy.array, default=numpy.array()]
-            - mode: desired linkage type [String, default=""]
+            - matrix: current distance matrix that shall be changed [numpy.array]
+            - matched_clusters: all points that determine the new matrix [numpy.array]
+            - mode: desired linkage type. Possible values are [String]
+                - "single-linkage"
+                - "full-linkage"
+                - "average"
         Returns:
-            - matrix: matrix with calculated distances [numpy.array]
+            - tuple containing two variables:
+                - new_matrix: changed matrix depending on given matched_clusters and mode [numpy.array]
+                - distance: distance between both closest children [float]
         '''
-        ## check whether a new cluster will be built or if all existing shall be analysed
-        if len(matched_clusters)>0 and len(unmatched_clusters) >= len(matched_clusters):
-            dim = len(unmatched_clusters) + 1
-        else:
-            dim = len(unmatched_clusters)
-        ## init matrix
-        matrix = np.zeros((dim, dim))
-        ## if more clusters are not merged yet than merged ones (indicates it is not the last time this function will be called)
-        if len(unmatched_clusters) >= len(matched_clusters):
-            ## go through all data points
-            for i,point in enumerate(unmatched_clusters):
-                for j in range(i,len(unmatched_clusters)):
-                    matrix[i][j] = np.linalg.norm(point - unmatched_clusters[j])
-                    matrix[j][i] = np.linalg.norm(point - unmatched_clusters[j])   
-                if len(matched_clusters)>0:
-                    ## if a new cluster is created, fill it with corresponding (chosen by mode) values
-                    newval = self.matrix_helper(point, matched_clusters, mode)
-                    matrix[i][j+1], matrix[j+1][i] = newval, newval
-        else:
-            ## init minimum distance
-            min_ = np.infty
-            ## go through all data points
-            for i,point in enumerate(unmatched_clusters):
-                for j in range(len(unmatched_clusters)):
-                    ## calculate new minimum distance, chosen by mode
-                    nmin_ = self.matrix_helper(point, matched_clusters, mode)
-                    ## if new one is smaller than old one, replace it
-                    if nmin_ < min_:
-                        min_ = nmin_
-                    matrix[j][i], matrix[i][j] = min_, min_
-                    ## all diagonal elements shall be 0
-                    if i==j:
-                        matrix[i][j], matrix[i][j] = 0,0
-        ## all diagonal elements shall be infinity (that they are not considered as closest clusters)        
-        matrix[matrix == 0] = np.infty
-        return matrix
+        ## make sure not to overwrite the original data
+        new_matrix = matrix.copy()
+        ## check the rows that contain the data of the 'merged' clusters
+        new_rows = matrix[matched_clusters]
+        ## define a helper variable (if data gets replaced, that not the same minimum will be taken multiple times)
+        help_val = np.infty
+        ## get the lowest distance between all the clusters
+        distance = np.min(new_rows)
+        ## get the new vals for the 'merged' clusters (depending on the linkage mode)
+        new_vals = self.linkage(new_rows, mode)
+        ## replace the minimum, the row and the column of the second cluster with the helper variable
+        new_vals[new_vals==distance] = help_val
+        new_matrix[matched_clusters[1]] = help_val
+        new_matrix[:,matched_clusters[1]] = help_val
+        ## replace the row and the columns of the first cluster with the new data
+        new_matrix[matched_clusters[0]] = new_vals
+        new_matrix[:,matched_clusters[0]] = new_vals
+        return new_matrix, distance
+
+    def get_counts(self, children:np.array, data:np.array) -> np.array:
+        '''
+        calculates the number of data points in each children cluster
+        Parameters:
+            - children: the pre-calculated children in the dendrogram tree from the cluster algorithm [numpy.array]
+            - data: the clustered data [numpy.array]
+        Returns:
+            - counts: array with respective number of points per children cluster [numpy.array]
+        NOTE!
+            - function only works if the initial data are cluster centers or only contain one data point
+        '''
+        ## init counts
+        counts = []
+        ## go thorugh all children
+        for i,child in enumerate(children):
+            ## if last child is reached
+            if i == len(children) - 1:
+                ## append all data points, because all data points are in the 'overall' cluster
+                counts.append(len(data))
+            ## if both 'cluster names' are in the range of really existing clusters
+            elif np.max(child) < len(data):
+                ## then it is the 'merge' of two initial centers and the result contains two data points
+                counts.append(2)
+            ## if the 'clusters  name' doesn't exist in the list of labels
+            else:
+                ## then the resulting cluster contains the data points of itself (=1) and the ones from the cluster before (=counts[-1])
+                counts.append(counts[-1]+1)
+        return np.array(counts)
 
     def get_dendrogram_data(self, data:np.array, clusters:np.array, method:str = "single-linkage") -> np.array:
         '''
@@ -324,60 +342,61 @@ class clustering:
         Parameters:
             - data: data points for the dendrogram (usually the cluster centers) [numpy.array]
             - clusters: labels of the respective clusters [numpy.array]
-            - method: desired linkage type [String, default="single-linkage"]
+            - method: desired linkage type. Possible values are [String]
+                - "single-linkage" (default)
+                - "full-linkage"
+                - "average"
         Returns:
             - dd_data: data of dendrogram [numpy.array]
-        NOTE:
-        Function is still not working all the time. Sometimes some weird errors occur that are not fixed yet
         '''
-        ## init dd_data
-        dd_data = []
-        ## init counter
-        j=0
-        ## get initial distance matrix
-        matrix = self.make_distance_matrix(data,mode=method)
-        ## make a copy of the original data
-        initdata = data.copy()
-        ## make sure cluster-labels are Integers
-        clusters = np.unique(clusters).astype(int)
-        ## make a copy of the original cluster-labels
-        initclusters = clusters.copy()
-        ## as long as not finished
-        while len(data)>1:
-            ## check the clusters with shortest distance
-            matched_clusters = np.unique(np.where(matrix == np.min(matrix)),0)
-            ## only two clusters at the time
-            matched_clusters = matched_clusters[-2:]
-            ## calc which clusters are not with shortest distance
-            unmatched_clusters = np.setdiff1d(initclusters.astype(int),matched_clusters)
-            ## make sure not to have higher index than length of data
-            unmatched_clusters[unmatched_clusters >= len(data)-1] = len(data)-1
-            ## drop all duplicates (of clusters in matched_clusters) in unmatched_cluster
-            unmatched_clusters = np.setdiff1d(unmatched_clusters,matched_clusters)
-            ## last iteration step
-            if matrix.shape == (2,2):
-                dd_data.append([clusters[-2],clusters[-1],np.min(matrix),clusters[-2]])
+        ## make sure 'cluster names' are numeric and unique and a numpy.array
+        clusters = np.array([i for i,_ in enumerate(np.unique(clusters))])
+        ## init the matrix with all the distances (as zeros)
+        matrix = np.zeros((len(data), len(data)))
+        ## go through all data points
+        for i, point in enumerate(data):
+            for j, other in enumerate(data):
+                ## except the diagonal elements - the are always 0
+                if i!=j:
+                    ## calc the distance between all the points and set to respective matrix element
+                    matrix[i][j] = np.linalg.norm(point - other)
+                ## replace diagonal elements with infitiy
+                else:
+                    matrix[i][j] = np.infty
+                ## matrix is symmetric
+                matrix[j][i] = matrix[i][j]
+        ## get the biggest 'cluster name'
+        max_label = np.max(clusters)
+        ##init children and distances
+        children = []
+        distances = []
+        ## as linkage matrix contains len(clusters)-1 rows and 4 columns (child1, child2, distance, count)
+        for i in range(clusters.__len__() - 1):
+            ## get the indize of the two clusters with the lowest distance in between
+            matched_clusters = np.where( matrix == np.min(matrix) )
+            matched_clusters = np.unique(matched_clusters,0)[-2:]
+            ## recalculate the matrix
+            matrix, new_distance = self.recalc_matrix(matrix, matched_clusters, method)
+            ## check 'who' the new children are - sorted
+            new_childs = sorted(clusters[matched_clusters])
+            ## if children is still empty, start with initial fill of new children
+            if children.__len__() == 0:
+                children = [new_childs]
+            ## else, append the new children
             else:
-                dd_data.append([clusters[matched_clusters[0]],clusters[matched_clusters[1]],np.min(matrix),clusters[matched_clusters[0]]])
-            ## if no unmatched_clusters remain --> end is reached
-            if len(unmatched_clusters) == 0:
-                unmatched_clusters = np.setdiff1d(initclusters,matched_clusters)
-                unmatched_clusters, matched_clusters = matched_clusters, unmatched_clusters
-            ## recalc distance matrix
-            matrix = self.make_distance_matrix(data[unmatched_clusters],initdata[matched_clusters],mode=method)
-            ## if not last iteration step reached
-            if len(data)>2:
-                data = data[unmatched_clusters]
-            else:
-                data = initdata[matched_clusters]
-            ## rearange the clusters
-            clusters = list(set(clusters.astype(int))-set(matched_clusters))
-            clusters.append(len(initclusters)+j)
-            clusters = np.array(sorted(clusters))
-            j+=1
-
-        dd_data = np.array(dd_data).astype(float)
-        return dd_data
+                children.append(new_childs)
+            ## replace the 'cluster names' of the already merged ones with new ones (just counting up)
+            clusters[matched_clusters] = max_label + i + 1
+            ## add the current distance to the distances
+            distances.append(new_distance)
+        ## make sure children and distances are numpy.arrays
+        children = np.array(children)
+        distances = np.array(distances)
+        ## get the counts
+        counts = self.get_counts(children, data)
+        ## set together the whole dendrogram data (being the scipy.cluster.hierarchy.linkage)
+        ddata = np.column_stack([children, distances, counts]).astype(float)
+        return ddata
 
     def make_dendrogram(self, dd_data:np.array):
         '''
