@@ -32,7 +32,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
 
 ## Usage:
-In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training` and a `predict` function. `score` functionality will be added later.
+In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training` and a `predict` function.
 
 Algorithms that work exactly as describe above:
 >   - Linear Regression
