@@ -83,6 +83,10 @@ class _regressor(abc.ABC):
         pass
     
     @abc.abstractmethod
+    def predict(self) -> None:
+        pass
+    
+    @abc.abstractmethod
     def score(self, y_test:np.array, y_pred:np.array, mode:str = "l2") -> float:
         '''
         implements the scoring function for the regressors, depending on given mode
