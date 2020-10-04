@@ -3,12 +3,13 @@ from heapq import nsmallest, nlargest
 import plotly.offline as py
 import plotly.graph_objs as go
 import itertools
+from ._helper import _classifier, _regressor
 
 '''
 implements all "classic" Machine Learning algorithms excluding Reinforcement Learning and Deep Learning
 '''
 
-class linear_regression:
+class linear_regression(_regressor):
     '''
     class that implements different approaches to do single dimensional or multidimensional linear regression:
         - single dimensional approaches:
@@ -133,19 +134,22 @@ class linear_regression:
         Parameters:
             - x_test: X Data to predict [numpy.array]
         Returns:
-            - y_test: predicted Y Data [numpy.array]
+            - y_pred: predicted Y Data [numpy.array]
         '''
         ## be sure x_test is array and in the right shape
         x_test = np.array(x_test).reshape(-1,self.dim)
         
         if self.dim < 2:
-            y_test = np.array([self.w[0] + self.w[1] * x_i for x_i in x_test])
+            y_pred = np.array([self.w[0] + self.w[1] * x_i for x_i in x_test])
         else:
-            y_test = np.array([self.w.dot(x_i) for x_i in x_test])
+            y_pred = np.array([self.w.dot(x_i) for x_i in x_test])
             
-        return y_test
+        return y_pred
     
-class clustering:
+    def score(self, y_test:np.array, y_pred:np.array, mode:str = "l2") -> float:
+        return super().score(y_test, y_pred, mode)
+    
+class clustering(_classifier):
     '''
     class that implements different approaches to do clustering:
         - k-means-clustering
@@ -435,12 +439,12 @@ class clustering:
         Parameters:
             - x_test: X Data to predict [numpy.array]
         Returns:
-            - y_test: predicted Y Data [numpy.array]
+            - y_pred: predicted Y Data [numpy.array]
         '''
         ## be sure x_test is array
         x_test = np.array(x_test)
-        ## init y_test
-        y_test = []
+        ## init y_pred
+        y_pred = []
         ## get all unique found labels
         labels = list(set(self.labels))
         ## go through all points in x_test
@@ -448,10 +452,13 @@ class clustering:
             ## calc distances to all cluster centers
             distances = [np.linalg.norm(point - c_center) for c_center in self.cluster_centers]
             ## add found label
-            y_test.append(labels[np.argmin(distances)])
-        ## be sure y_test is array
-        y_test = np.array(y_test)
-        return y_test
+            y_pred.append(labels[np.argmin(distances)])
+        ## be sure y_pred is array
+        y_pred = np.array(y_pred)
+        return y_pred
+    
+    def score(self, y_test:np.array, y_pred:np.array, mode:str = "accuracy") -> float:
+        return super().score(y_test, y_pred, mode)
     
 class dimension_reduction:
     '''
@@ -651,7 +658,7 @@ class dimension_reduction:
         dist = [min([ np.linalg.norm(x_test - c.dot(self.W)) for c in label ]) for label in self.X]    
         return np.argmin(dist)
     
-class gmm:
+class gmm(_classifier):
     '''
     class that implements the Expetation-Maximization algorithm using Gaussian Mixture Models
     '''
@@ -843,18 +850,21 @@ class gmm:
         Parameters:
             - x_test: X Data to predict [numpy.array]
         Returns:
-            - y_test: class of prediction [numpy.array]
+            - y_pred: class of prediction [numpy.array]
         '''
         ## be sure x_test is array
         x_test = np.array(x_test).reshape(-1,1)
         l = len(self.pis)
         ## calculate the responsibilities
         responsibilities = [[self.pis[k] * (self.gauss_pdf(x_test,self.mus[k],self.sigmas[k]) / sum([self.pis[k_]*self.gauss_pdf(x_test,self.mus[k_],self.sigmas[k_]) for k_ in range(l)]))] for k in range(l)]
-        ## get the corresponding label (the one with the highest responsibility)
-        label = np.argmax([np.sum(x) for x in responsibilities])
-        return label
+        ## get the corresponding y_pred (=label) (the one with the highest responsibility)
+        y_pred = np.argmax([np.sum(x) for x in responsibilities])
+        return y_pred
     
-class gp:
+    def score(self, y_test:np.array, y_pred:np.array, mode:str = "accuracy") -> float:
+        return super().score(y_test, y_pred, mode)
+    
+class gp(_regressor):
     '''
     class that implements gaussian processes as regression algorithm 
     '''
@@ -926,9 +936,9 @@ class gp:
             - return_cov: whether (= True) or not (= False) return the covariance of GP [Boolean, default=False]
         Returns:
             if return_cov == True:
-                - (y_test, covariance): tuple of regressed y_test and covariance [tuple]
+                - (y_pred, covariance): tuple of regressed y_pred and covariance [tuple]
             else:
-                - y_test: regressed y_test [numpy.array]
+                - y_pred: regressed y_pred [numpy.array]
         '''
         ## make sure x, x_test and y are numpy.arrays
         x, x_test, y = np.array(x), np.array(x_test), np.array(y)
@@ -936,10 +946,13 @@ class gp:
         k, k_star, k_2star = self.calc_kernel(x,x_test,sigma,l,mode)
         ## get shape of x
         n = k.shape[0]
-        ## get regressed y_test
-        y_test = np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), (y.reshape([n, 1]))))
+        ## get regressed y_pred
+        y_pred = np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), (y.reshape([n, 1]))))
         ## calc covariance
         if return_cov:
             covariance = k_2star - np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), k_star.T))
-            return (y_test, covariance)
-        return y_test
+            return (y_pred, covariance)
+        return y_pred
+    
+    def score(self, y_test:np.array, y_pred:np.array, mode:str = "l2") -> float:
+        return super().score(y_test, y_pred, mode)
