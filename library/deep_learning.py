@@ -64,7 +64,7 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
         return np.sqrt(np.sum(( x - y )**2 ) / x.__len__())
     else:
         print('Unknown loss function. L1 is used')
-        raise Exception("given loss function is not (yet) implemented!")
+        return np.sum( np.abs(x - y) )
         
 
 
