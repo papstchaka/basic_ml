@@ -873,11 +873,17 @@ class gp(_regressor):
         '''
         constructor of class
         initializes:
-            - None
+            - K: kernel matrix of x-values [numpy.array]
+            - K*: kernel matrix of x/x_test values [numpy.array]
+            - k_2star: kernel matrix of x_test values [numpy.array]
+            - sigma: noise constant to add [Float]
         Returns:
             - None
         '''
-        pass
+        self.k = np.array([])
+        self.k_star = np.array([])
+        self.k_2star = np.array([])
+        self.sigma = 0.0
     
     def kernel_function(self, x1:float, x2:float, sigma:float, l:float, mode:str, training:bool = False) -> float:
         '''
@@ -922,17 +928,31 @@ class gp(_regressor):
         k_2star = np.array([self.kernel_function(i,j, sigma, l, mode) for (i,j) in itertools.product(x_star,x_star)]).reshape(len(x_star),len(x_star))
         return (k, k_star, k_2star)
     
-    def train(self, x:np.array, x_test:np.array, y:np.array, sigma:float, l:float, mode:str = "rbf", return_cov=False) -> tuple:
+    def train(self, x:np.array, x_test:np.array, sigma:float, l:float, mode:str = "rbf") -> tuple:
         '''
         training function for Gaussian Process given x and y data. Also predicts the regressed value(s) for given x_test
         Parameters:
             - x: training data points [numpy.array]
             - x_test: testing data points [numpy.array]
-            - y: training labels [numpy.array]
             - sigma: noise constant to add [Float]
             - l: lenghtscale of GP [Float]
             - mode: which kind of kernel to use. Possible values are [String]
                 - rbf: Radial Basis Function (default)
+        Returns:
+            - None
+        '''
+        ## make sure x and x_test are numpy.arrays
+        x, x_test = np.array(x), np.array(x_test)
+        ## calc all kernel matrizes
+        self.k, self.k_star, self.k_2star = self.calc_kernel(x,x_test,sigma,l,mode)
+        ## keep track of sigma
+        self.sigma = sigma
+        
+    def predict(self, y:np.array, return_cov=False) -> tuple:
+        '''
+        prediction function for Gaussian Process
+        Parameters:
+            - y: training labels [numpy.array]
             - return_cov: whether (= True) or not (= False) return the covariance of GP [Boolean, default=False]
         Returns:
             if return_cov == True:
@@ -940,17 +960,15 @@ class gp(_regressor):
             else:
                 - y_pred: regressed y_pred [numpy.array]
         '''
-        ## make sure x, x_test and y are numpy.arrays
-        x, x_test, y = np.array(x), np.array(x_test), np.array(y)
-        ## calc all kernel matrizes
-        k, k_star, k_2star = self.calc_kernel(x,x_test,sigma,l,mode)
+        ## make sure y is numpy.array
+        y = np.array(y)
         ## get shape of x
-        n = k.shape[0]
+        n = self.k.shape[0]
         ## get regressed y_pred
-        y_pred = np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), (y.reshape([n, 1]))))
+        y_pred = np.dot(self.k_star, np.dot(np.linalg.inv(self.k + (self.sigma)*np.eye(n)), (y.reshape([n, 1]))))
         ## calc covariance
         if return_cov:
-            covariance = k_2star - np.dot(k_star, np.dot(np.linalg.inv(k + (sigma)*np.eye(n)), k_star.T))
+            covariance = self.k_2star - np.dot(self.k_star, np.dot(np.linalg.inv(self.k + (self.sigma)*np.eye(n)), self.k_star.T))
             return (y_pred, covariance)
         return y_pred
     
