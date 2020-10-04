@@ -19,7 +19,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/reinforcement_learning.py" target="_blank">`reinforcement_learning.py`</a> contains Reinforcement Learning algorithms
 >   - <a href="library/deep_learning.py" target="_blank">`deep_learning.py`</a> contains Deep Learning using Neural Networks
 >   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
->   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` functions
+>   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
 
 ## Functionalities that are already implemented (state of 04.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
