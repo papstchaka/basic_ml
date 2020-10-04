@@ -4,14 +4,13 @@ Repository holds a library of most common algorithms used manually without using
 Only used libraries are:
 >   - built-in libraries that belong to Python
 >   - <a href="https://numpy.org/" target="_blank">`numpy`</a>
->   - <a href="https://docs.scipy.org/doc/scipy/reference/index.html" target="_blank">`scipy`</a> - Only used for `dendrogram` function in `scipy.cluster.hierarchy`
->   - <a href="https://docs.python.org/3.0/library/heapq.html" target="_blank">`heapq`</a>
+>   - <a href="https://docs.scipy.org/doc/scipy/reference/index.html" target="_blank">`scipy`</a> - only used for `dendrogram` function in `scipy.cluster.hierarchy`
 >   - <a href="https://plotly.com/" target="_blank">`plotly`</a>
 >   - <a href="https://github.com/tqdm/tqdm" target="_blank">`tqdm`</a> - for showing progress of training
 >   - <a href="https://github.com/HIPS/autograd" target="_blank">`autograd`</a> - for derivation of functions
 
 which can be installed via
->       `pip install numpy scipy heapq plotly tqdm autograd`
+>       `pip install numpy scipy plotly tqdm autograd`
 
 ## Scripts:
 The implemented algorithms are splitted into three parts, given by the three different scripts in `library`:
