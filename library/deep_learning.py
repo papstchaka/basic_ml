@@ -63,8 +63,8 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
     elif mode == "rmse":
         return np.sqrt(np.sum(( x - y )**2 ) / x.__len__())
     else:
-        print('Unknown loss function. L1 is used')
-        return np.sum( np.abs(x - y) )
+        print('Unknown loss function. L2 is used')
+        return np.sum(( x - y )**2 )
         
 
 
