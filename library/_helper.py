@@ -1,14 +1,27 @@
 import numpy as np
 import abc
 
+'''
+containing abstract classes as support for the other algorithms - for example implementing the score() function for all classifiers and regressors
+'''
+
 class _classifier(abc.ABC):
+    '''
+    abstract class containing all functions that every classifier have in common -> completely implements the score() function as it is the same for all classifiers
+    '''
     
     @abc.abstractmethod
     def train(self) -> None:
+        '''
+        implements the training function. Does nothing, except making sure that every classifier has one
+        '''
         pass
     
     @abc.abstractmethod
     def predict(self) -> None:
+        '''
+        implements the prediction function. Does nothing, except making sure that every classifier has one
+        '''
         pass
         
     def calc_rates(self, y_test:np.array, y_pred:np.array) -> list:
@@ -77,13 +90,22 @@ class _classifier(abc.ABC):
         return metric
     
 class _regressor(abc.ABC):
+    '''
+    abstract class containing all functions that every regressor have in common -> completely implements the score() function as it is the same for all regressors
+    '''
     
     @abc.abstractmethod
     def train(self) -> None:
+        '''
+        implements the training function. Does nothing, except making sure that every regressor has one
+        '''
         pass
     
     @abc.abstractmethod
     def predict(self) -> None:
+        '''
+        implements the prediction function. Does nothing, except making sure that every regressor has one
+        '''
         pass
     
     @abc.abstractmethod
