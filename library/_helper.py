@@ -11,18 +11,30 @@ class _classifier(abc.ABC):
     '''
     
     @abc.abstractmethod
-    def train(self) -> None:
+    def train(self, X_train:np.array) -> np.array:
         '''
-        implements the training function. Does nothing, except making sure that every classifier has one
+        implements the training function. Makes sure that every classifier has one
+        Paramters:
+            - X_train: x values to train [numpy.array]
+        Returns:
+            - X_train: processed x values for training [numpy.array]
         '''
-        pass
+        ## make sure X_train is numpy.array
+        X_train = np.array(X_train)
+        return X_train
     
     @abc.abstractmethod
-    def predict(self) -> None:
+    def predict(self, X_test:np.array) -> np.array:
         '''
-        implements the prediction function. Does nothing, except making sure that every classifier has one
+        implements the prediction function. Makes sure that every classifier has one
+        Paramters:
+            - X_test: x values to predict [numpy.array]
+        Returns:
+            - X_test: processed x values for prediction [numpy.array]
         '''
-        pass
+        ## make sure X_test is numpy.array
+        X_test = np.array(X_test)
+        return X_test
         
     def calc_rates(self, y_test:np.array, y_pred:np.array) -> list:
         '''
@@ -95,18 +107,30 @@ class _regressor(abc.ABC):
     '''
     
     @abc.abstractmethod
-    def train(self) -> None:
+    def train(self, X_train:np.array) -> np.array:
         '''
-        implements the training function. Does nothing, except making sure that every regressor has one
+        implements the training function. Makes sure that every regressor has one
+        Paramters:
+            - X_train: x values to train [numpy.array]
+        Returns:
+            - X_train: processed x values for training [numpy.array]
         '''
-        pass
+        ## make sure X_train is numpy.array
+        X_train = np.array(X_train)
+        return X_train
     
     @abc.abstractmethod
-    def predict(self) -> None:
+    def predict(self, X_test:np.array) -> np.array:
         '''
-        implements the prediction function. Does nothing, except making sure that every regressor has one
+        implements the prediction function. Makes sure that every regressor has one
+        Paramters:
+            - X_test: x values to predict [numpy.array]
+        Returns:
+            - X_test: processed x values for prediction [numpy.array]
         '''
-        pass
+        ## make sure X_test is numpy.array
+        X_test = np.array(X_test)
+        return X_test
     
     @abc.abstractmethod
     def score(self, y_test:np.array, y_pred:np.array, mode:str = "l2") -> float:

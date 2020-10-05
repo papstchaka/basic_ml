@@ -1,4 +1,5 @@
 import numpy as np
+from heapq import nsmallest, nlargest
 import plotly.offline as py
 import plotly.graph_objs as go
 import itertools
@@ -116,8 +117,8 @@ class linear_regression(_regressor):
         Returns:
             - None
         '''
-        ## be sure x and y are arrays with the right shapes
-        x = np.array(x)
+        x = super().train(x)
+        ## be sure y is array and x and y have the right shapes
         x = x if len(x.shape)>1 else x.reshape(-1,1)
         self.dim = x.shape[1]
         y = np.array(y).reshape(-1,self.dim)
@@ -135,8 +136,9 @@ class linear_regression(_regressor):
         Returns:
             - y_pred: predicted Y Data [numpy.array]
         '''
-        ## be sure x_test is array and in the right shape
-        x_test = np.array(x_test).reshape(-1,self.dim)
+        x_test = super().predict(x_test)
+        ## be sure x_test is in the right shape
+        x_test = x_test.reshape(-1,self.dim)
         
         if self.dim < 2:
             y_pred = np.array([self.w[0] + self.w[1] * x_i for x_i in x_test])
@@ -425,8 +427,7 @@ class clustering(_classifier):
         Returns:
             - None
         '''
-        ## be sure x is array
-        x = np.array(x)
+        x = super().train(x)
         if mode == "k_means":
             self.k_means(x, k=k)
         if mode == "nubs":
@@ -440,8 +441,7 @@ class clustering(_classifier):
         Returns:
             - y_pred: predicted Y Data [numpy.array]
         '''
-        ## be sure x_test is array
-        x_test = np.array(x_test)
+        x_test = super().predict(x_test)
         ## init y_pred
         y_pred = []
         ## get all unique found labels
@@ -754,21 +754,20 @@ class gmm(_classifier):
                 return pdf
         return np.nan
     
-    def train(self, xs:np.array, n:int = 2, tol:float = 1e-5, max_iter:int = 100) -> None:
+    def train(self, x:np.array, n:int = 2, tol:float = 1e-5, max_iter:int = 100) -> None:
         '''
         implementation of EM (Expectation-Maximization) Algorithm using Gaussian Mixture Models. Fits the Probability Density Functions on the given data
         Parameters:
-            - xs: data points the GMM is fitted on [numpy.array]
+            - x: data points the GMM is fitted on [numpy.array]
             - n: number of different pdfs [Integer, default = 2]
             - tol: tolerance when to stop the fitting [Float, default = 1e-5]
             - max_iter: maximal number of iterations before stopping the fit [Integer, default = 100]
         Returns:
             - None
         '''
+        xs = super().train(x)
         ## set random seed
         np.random.seed(42)
-        ## make sure xs is numpy.array
-        xs = np.array(xs)
         ## check whether multivariate (> 1D) data
         if len(xs.shape) == 1:
             xs = xs.reshape(-1,1)
@@ -851,8 +850,8 @@ class gmm(_classifier):
         Returns:
             - y_pred: class of prediction [numpy.array]
         '''
-        ## be sure x_test is array
-        x_test = np.array(x_test).reshape(-1,1)
+        x_test = super().predict(x_test)
+        x_test = x_test.reshape(-1,1)
         l = len(self.pis)
         ## calculate the responsibilities
         responsibilities = [[self.pis[k] * (self.gauss_pdf(x_test,self.mus[k],self.sigmas[k]) / sum([self.pis[k_]*self.gauss_pdf(x_test,self.mus[k_],self.sigmas[k_]) for k_ in range(l)]))] for k in range(l)]
@@ -940,8 +939,9 @@ class gp(_regressor):
         Returns:
             - None
         '''
-        ## make sure x and x_test are numpy.arrays
-        x, x_test = np.array(x), np.array(x_test)
+        x = super().train(x)
+        ## make sure x_test are numpy.arrays
+        x_test = np.array(x_test)
         ## calc all kernel matrizes
         self.k, self.k_star, self.k_2star = self.calc_kernel(x,x_test,sigma,l,mode)
         ## keep track of sigma
@@ -959,8 +959,7 @@ class gp(_regressor):
             else:
                 - y_pred: regressed y_pred [numpy.array]
         '''
-        ## make sure y is numpy.array
-        y = np.array(y)
+        y = super().predict(y)
         ## get shape of x
         n = self.k.shape[0]
         ## get regressed y_pred
