@@ -1,8 +1,4 @@
 import numpy as np
-from heapq import nsmallest, nlargest
-import plotly.offline as py
-import plotly.graph_objs as go
-import itertools
 from ._helper import _classifier, _regressor
 
 '''
@@ -22,15 +18,28 @@ class linear_regression(_regressor):
     
     def __init__(self) -> None:
         '''
-        constructor of class
+        constructor of class - imports needed modules
         initializes:
             - w to be an empty array
             - dim (dimension) to be 0
         Returns:
             - None
         '''
+        self._imports()
         self.w = np.array([])
         self.dim = 0
+        
+    def _imports(self) -> None:
+        '''
+        handles the imports for the class
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        global np
+        import numpy
+        np = numpy
     
     def single_dimension(self, x:np.array, y:np.array, mode:str = "gradient_descent") -> None:
         '''
@@ -163,15 +172,28 @@ class clustering(_classifier):
     
     def __init__(self) -> None:
         '''
-        constructor of class
+        constructor of class - imports needed modules
         initializes:
             - labels to be an emtpy array
             - cluster_centers to be an emtpy array
         Returns:
             - None
         '''
+        self._imports()
         self.labels = np.array([])
         self.cluster_centers = np.array([])
+        
+    def _imports(self) -> None:
+        '''
+        handles the imports for the class
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        global np
+        import numpy
+        np = numpy
     
     def k_means(self, x:np.array, cluster_centers:list = [], k:int = 3, epochs:float=np.infty, border:float = 1e-5) -> None:
         '''
@@ -475,9 +497,21 @@ class dimension_reduction:
         Returns:
             - None
         '''
+        self._imports()
         self.W = 0
         self.X = np.array([])
-        pass
+        
+    def _imports(self) -> None:
+        '''
+        handles the imports for the class - imports needed modules
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        global np
+        import numpy
+        np = numpy
     
     def calc_mean(self, X:np.array, verbose:int) -> np.array:
         '''
@@ -664,7 +698,7 @@ class gmm(_classifier):
     
     def __init__(self):
         '''
-        constructor of class
+        constructor of class - imports needed modules
         initializes:
             - log-likelihoods (ll_new, [Float])
             - priors (pis, [numpy.array])
@@ -673,10 +707,23 @@ class gmm(_classifier):
         Returns:
             - None
         '''
+        self._imports()
         self.ll = 0.0
         self.pis = np.array([])
         self.mus = np.array([])
         self.sigmas = np.array([])
+        
+    def _imports(self) -> None:
+        '''
+        handles the imports for the class
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        global np, py, go
+        import numpy, plotly
+        np, py, go = numpy, plotly.offline, plotly.graph_objs
     
     def plot_pdf(self, xs:np.array, mus:np.array, sigmas:np.array, variance:int = 2) -> None:   
         '''
@@ -694,7 +741,7 @@ class gmm(_classifier):
         ## set number of different classes
         l = len(mus)
         ## init x values
-        x = np.linspace(xs.min(),xs.max(),variance/1e-1)
+        x = np.linspace(xs.min(),xs.max(),int(variance/1e-1))
         pos = np.array(x.flatten()).T.reshape(-1,1)   
         multidim = False
         ## if multivariate gaussian (more than 1D)
@@ -869,7 +916,7 @@ class gp(_regressor):
     
     def __init__(self):
         '''
-        constructor of class
+        constructor of class - imports needed modules
         initializes:
             - K: kernel matrix of x-values [numpy.array]
             - K*: kernel matrix of x/x_test values [numpy.array]
@@ -878,10 +925,23 @@ class gp(_regressor):
         Returns:
             - None
         '''
+        self._imports()
         self.k = np.array([])
         self.k_star = np.array([])
         self.k_2star = np.array([])
         self.sigma = 0.0
+        
+    def _imports(self) -> None:
+        '''
+        handles the imports for the class
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        global np, itertools
+        import numpy, itertools
+        np, itertools = numpy, itertools
     
     def kernel_function(self, x1:float, x2:float, sigma:float, l:float, mode:str, training:bool = False) -> float:
         '''
