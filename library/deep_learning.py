@@ -1,4 +1,4 @@
-from autograd import grad
+from autograd import elementwise_grad
 import autograd.numpy as np
 from tqdm.notebook import tqdm
 import plotly.offline as py
@@ -10,7 +10,7 @@ implements Deep Learning using Neural Networks
 
 def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> object:
     '''
-    returns corresponding value for given activation function
+    returns corresponding activation function for given mode
     Parameters:
         - mode: mode of the activation function. Possible values are [String]
             - Sigmoid-function --> "sigmoid"
@@ -34,7 +34,7 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
         y = lambda x: x
     ## when derivation of function shall be returned
     if derivate:
-        return grad(y)
+        return elementwise_grad(y)
     return  y
 
 def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
@@ -145,12 +145,12 @@ class NeuralNetwork(object):
         ## init dA/dZ -> activation_function with respect to 'error for each layer'
         deltas = [None] * len(self.weights)
         ## get last layer's error
-        derivates = np.array([get_activation_function(self.activations[-1], True)(z) for z in z_s[-1].flatten()])
+        derivates = get_activation_function(self.activations[-1], True)(z_s[-1].flatten())
         deltas[-1] = ((y-a_s[-1])*derivates)
         ## perform backpropagation
         for i in reversed(range(len(deltas)-1)):
             ## get errors of all other layers
-            derivates = np.array([get_activation_function(self.activations[i], True)(z) for z in z_s[i].flatten()]).reshape(z_s[i].shape)
+            derivates = get_activation_function(self.activations[i], True)(z_s[i]).flatten().reshape(z_s[i].shape)
             deltas[i] = self.weights[i+1].T.dot(deltas[i+1])*derivates        
         ## get batch_size as being the shape of y
         batch_size = y.shape[1]
