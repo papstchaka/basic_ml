@@ -11,6 +11,17 @@ class _classifier(abc.ABC):
     '''
     
     @abc.abstractmethod
+    def _imports(self) -> None:
+        '''
+        force all classifier to have an _imports function to handle all the needed imports independently.
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        pass
+    
+    @abc.abstractmethod
     def train(self, X_train:np.array) -> np.array:
         '''
         implements the training function. Makes sure that every classifier has one
@@ -105,6 +116,17 @@ class _regressor(abc.ABC):
     '''
     abstract class containing all functions that every regressor have in common -> completely implements the score() function as it is the same for all regressors
     '''
+    
+    @abc.abstractmethod
+    def _imports(self) -> None:
+        '''
+        force all regressor to have an _imports function to handle all the needed imports independently.
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        pass
     
     @abc.abstractmethod
     def train(self, X_train:np.array) -> np.array:
