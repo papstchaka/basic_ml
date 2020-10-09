@@ -19,6 +19,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/deep_learning.py" target="_blank">`deep_learning.py`</a> contains Deep Learning using Neural Networks
 >   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
 >   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
+>   - <a href="library/preprocessing.py" target="_blank">`preprocessing.py`</a> containing classes for data preprocessing
 
 ## Functionalities that are already implemented (state of 09.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
@@ -30,6 +31,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
 >   - Deep Learning using Neural Networks <a href="https://www.tensorflow.org/tutorials/keras/classification" target="_blank">`Deep Learning by Tensorflow`</a>
 >   - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
+>   - Data Preprocessing for DataSet manipulation (containing a MinMaxScaler) <a href=https://scikit-learn.org/stable/modules/preprocessing.html target="_blank">`Preprocessing by sklearn`</a>
 
 ## Usage:
 In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training()`, a `predict()` and a `score()` - if possible - function.
@@ -49,6 +51,7 @@ Algorithms with different work-wise:
 
 ## What's next:
 
+>   - working on the Deep Learning module
 >   - go through all the algorithms and add further variety
 
 ## Supporting developers:
