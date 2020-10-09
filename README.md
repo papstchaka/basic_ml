@@ -23,7 +23,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 ## Functionalities that are already implemented (state of 04.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
 >   - Clustering <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
->   - Dimension Reduction Algorithms (LDA and PCA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
+>   - Dimension Reduction Algorithms (LDA, PCA and ICA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm <a href="https://scikit-learn.org/stable/modules/generated/sklearn.mixture.GaussianMixture.html" target="_blank">`GMM with EM by sklearn`</a>
 >   - Gaussian Processes Regression <a href="https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html" target="_blank">`GP by sklearn`</a>
 >   - Reinforcement Learning <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
@@ -34,10 +34,10 @@ The implemented algorithms are splitted into three parts, given by the three dif
 ## Usage:
 In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training()`, a `predict()` and a `score()` - if possible - function.
 
-Algorithms that work exactly as describe above:
+Algorithms that work exactly as describe above, respectively in their sklearn documentation:
 >   - Linear Regression -> Regressor
 >   - Clustering -> Classifier
->   - Dimension Reduction - does not support `score()` function
+>   - Dimension Reduction - `train()`, `predict()` and `score()` function are `fit()`, `fit_transform()` and `transform()` respectively
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm -> Classifier
 >   - Gaussian Processes -> Regressor
 >   - Deep Learning using Neural Networks - has its one `score()` function with the `loss()` function in training
