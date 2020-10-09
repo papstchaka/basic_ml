@@ -1,12 +1,12 @@
+'''
+implements Deep Learning using Neural Networks
+'''
+
 from autograd import elementwise_grad
 import autograd.numpy as np
 from tqdm.notebook import tqdm
 import plotly.offline as py
 import plotly.graph_objs as go
-
-'''
-implements Deep Learning using Neural Networks
-'''
 
 def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> object:
     '''
@@ -62,6 +62,8 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
         return np.sum( np.abs(x - y) ) / x.__len__()
     elif mode == "rmse":
         return np.sqrt(np.sum(( x - y )**2 ) / x.__len__())
+    elif mode == "cross-entropy": ## classification
+        return - ( np.sum( x*np.log(y) + (1-x) * np.log(1-y) ) )
     else:
         print('Unknown loss function. L2 is used')
         return np.sum(( x - y )**2 )
@@ -193,7 +195,7 @@ class NeuralNetwork(object):
                 self.weights = [w + lr * dweight for w,dweight in  zip(self.weights, dw)]
                 self.biases = [w + lr * dbias for w,dbias in  zip(self.biases, db)]
             ## update the loss
-            loss = loss_function(a_s[-1], y_batch, "rmse")
+            loss = loss_function(a_s[-1], y_batch)
             ## update progress of training
             pbar.set_description(f'Epoch: {e}; Loss: {loss}')
             pbar.update(1)
