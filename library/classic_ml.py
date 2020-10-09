@@ -493,13 +493,13 @@ class dimension_reduction:
         '''
         constructor of class
         initializes:
-            - W for transformation to 0
+            - components_ for transformation to None
             - X as Train Data to emtpy numpy array
         Returns:
             - None
         '''
         self._imports()
-        self.W = 0
+        self.components_ = None
         self.X = np.array([])
         
     def _imports(self) -> None:
@@ -514,6 +514,13 @@ class dimension_reduction:
         import autograd.numpy, numpy
         from autograd import elementwise_grad
         np, elementwise_grad, npa = numpy, elementwise_grad, autograd.numpy
+        
+    def check_is_fitted(self) -> None:
+        '''
+        check whether model is already fitted
+        '''
+        if self.components_ == None:
+            raise Exception("model is not fitted yet!")
     
     def calc_mean(self, X:np.array, verbose:int) -> np.array:
         '''
@@ -737,7 +744,6 @@ class dimension_reduction:
         S_W = self.calc_sw(means, verbose)
         ## calculate transforming vector
         self.components_ = np.linalg.inv(S_W).dot(means[0]-means[1]).T
-        return np.dot(X, self.components_.T)
         
     def pca(self, X:np.array, dim:int, verbose:int = 0) -> None:
         '''
@@ -767,7 +773,6 @@ class dimension_reduction:
         ## calc (eigenvalue, eigenvector)-pairs
         eig_pairs = self.calc_eig_vals(S_W, cov, verbose)
         self.components_ = self.calc_W(eig_pairs, dim, verbose).T
-        return np.dot(X, self.components_.T)
         
     def fastica(self, X:np.array, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4, verbose:int = 0) -> None:
         '''
@@ -820,12 +825,10 @@ class dimension_reduction:
                     break
             ## add component of all components de-mixing matrix
             W[i,:] = w
-        S = np.dot(np.dot(W, K), X).T
         ## compute the components
         self.components_ = np.dot(W, K)
-        return S
     
-    def fit(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4, fit_transform = False) -> None:
+    def fit(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4) -> None:
         '''
         fits the model to X
         Parameters:
@@ -841,23 +844,20 @@ class dimension_reduction:
             - n_components: desired number of components of projected data [Integer, default = None] - if FastICA is the algorithm
             - iterations: max. number of iterations per dimension [Integer, default = 20] - if FastICA is the algorithm
             - tolerance: tolerance to break iteration [Float, default = 1e-5] - if FastICA is the algorithm
-            - fit_transform: whether to only fit the model (=False, default) or already transform the data (=True) [Boolean]
         Returns:
             - None
         '''
         ## make sure X is numpy.array
         X = np.array(X)
         if algorithm == "lda":
-            X_new = self.lda(X, verbose)
+            self.lda(X, verbose)
         elif algorithm == "pca":
-            X_new = self.pca(X, dim, verbose)
+            self.pca(X, dim, verbose)
         elif algorithm == "fastica":
-            X_new = self.fastica(X, n_components, iterations, tolerance, verbose)
+            self.fastica(X, n_components, iterations, tolerance, verbose)
         else:
             print("algorithm not implemented (yet)! Using LDA instead")
-            X_new = self.lda(X, verbose)
-        if fit_transform:
-            return X_new
+            self.lda(X, verbose)
         
     def fit_transform(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4) -> np.array:
         '''
@@ -878,7 +878,8 @@ class dimension_reduction:
         Returns:
             - X_new: transormed X data [numpy.array]
         '''
-        X_new = self.fit(X, algorithm, verbose, dim, n_components, iterations, tolerance, True)
+        self.fit(X, algorithm, verbose, dim, n_components, iterations, tolerance)
+        X_new = self.transform(X)
         return X_new
     
     def transform(self, x_test:np.array) -> np.array:
@@ -889,6 +890,8 @@ class dimension_reduction:
         Returns:
             - x_transformed: transformed data point [numpy.array]
         '''
+        ## check whether model is fitted
+        self.check_is_fitted()
         ## make sure x_test is numpy array, subtract mean
         x_test = np.array(x_test) - self.mean.T
         return np.dot(x_test, self.components_.T)
