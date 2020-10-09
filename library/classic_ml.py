@@ -825,16 +825,15 @@ class dimension_reduction:
         self.components_ = np.dot(W, K)
         return S
     
-    def fit(self, X:np.array, algorithm:str, fit_transform = False, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4) -> None:
+    def fit(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4, fit_transform = False) -> None:
         '''
-        fit the model to X
+        fits the model to X
         Parameters:
             - X: Train Data [numpy.array]
             - algorithm: which feature reduction algorithm to use. Possible values are [String]
                 - LDA -> "lda"
                 - PCA -> "pca"
                 - FastICA -> "fastica"
-            - fit_transform: whether to only fit the model (=False, default) or already transform the data (=True) [Boolean]
             - verbose: how detailed the train process shall be documented. Possible values are [Integer]
                 - 0 -> no information (default)
                 - 1 -> more detailed information
@@ -842,6 +841,7 @@ class dimension_reduction:
             - n_components: desired number of components of projected data [Integer, default = None] - if FastICA is the algorithm
             - iterations: max. number of iterations per dimension [Integer, default = 20] - if FastICA is the algorithm
             - tolerance: tolerance to break iteration [Float, default = 1e-5] - if FastICA is the algorithm
+            - fit_transform: whether to only fit the model (=False, default) or already transform the data (=True) [Boolean]
         Returns:
             - None
         '''
@@ -858,6 +858,28 @@ class dimension_reduction:
             X_new = self.lda(X, verbose)
         if fit_transform:
             return X_new
+        
+    def fit_transform(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4) -> np.array:
+        '''
+        fits the model to X and returns transformed X
+        Parameters:
+            - X: Train Data [numpy.array]
+            - algorithm: which feature reduction algorithm to use. Possible values are [String]
+                - LDA -> "lda"
+                - PCA -> "pca"
+                - FastICA -> "fastica"
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
+            - dim: desired dimension of projected data [Integer] - if PCA is the algorithm
+            - n_components: desired number of components of projected data [Integer, default = None] - if FastICA is the algorithm
+            - iterations: max. number of iterations per dimension [Integer, default = 20] - if FastICA is the algorithm
+            - tolerance: tolerance to break iteration [Float, default = 1e-5] - if FastICA is the algorithm
+        Returns:
+            - X_new: transormed X data [numpy.array]
+        '''
+        X_new = self.fit(X, algorithm, verbose, dim, n_components, iterations, tolerance, True)
+        return X_new
     
     def transform(self, x_test:np.array) -> np.array:
         '''
