@@ -7,6 +7,7 @@ import autograd.numpy as np
 from tqdm.notebook import tqdm
 import plotly.offline as py
 import plotly.graph_objs as go
+from .preprocessing import MinMaxScaler
 
 def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> object:
     '''
@@ -86,6 +87,7 @@ class NeuralNetwork(object):
             - activations - checks whether number of activation functions is same as number of layers
             - weights: to be a list filled with random values in the shape of current and following layer [List]
             - biases: to be a list filled with random values in the shape of current and following layer [List]
+            - scaler: for scaling the data [object]
         Returns:
             - None
         '''
@@ -102,6 +104,8 @@ class NeuralNetwork(object):
         for i in range(len(layers)-1):
             self.weights.append(np.random.randn(layers[i+1], layers[i]))
             self.biases.append(np.random.randn(layers[i+1], 1))
+        ## init scaler
+        self.scaler = MinMaxScaler()
     
     def feedforward(self, x:np.array) -> tuple:
         '''
@@ -173,6 +177,9 @@ class NeuralNetwork(object):
         Returns:
             - None
         '''
+        ## fit scaler, scale y data
+        self.scaler.fit(y.T)
+        y = self.scaler.transform(y.T).T
         ## init loss to be infinity
         loss = np.infty
         ## init the bar to show the progress
@@ -216,6 +223,8 @@ class NeuralNetwork(object):
         _, a_s = self.feedforward(x_test)
         ## get y_pred
         y_pred = a_s[-1]
+        ## unscale the data again
+        y_pred = self.scaler.inverse_transform(y_pred.T).T
         ## if shall be shown
         if verbose > 0:
             data = []
