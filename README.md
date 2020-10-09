@@ -20,7 +20,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
 >   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
 
-## Functionalities that are already implemented (state of 04.10.2020):
+## Functionalities that are already implemented (state of 09.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
 >   - Clustering <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
 >   - Dimension Reduction Algorithms (LDA, PCA and ICA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
