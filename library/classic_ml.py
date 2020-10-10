@@ -493,13 +493,13 @@ class dimension_reduction:
         '''
         constructor of class
         initializes:
-            - components_ for transformation to None
+            - is_fitted: whether scaler is fitted or not to False [Boolean]
             - X as Train Data to emtpy numpy array
         Returns:
             - None
         '''
         self._imports()
-        self.components_ = None
+        self.is_fitted = False
         self.X = np.array([])
         
     def _imports(self) -> None:
@@ -519,7 +519,9 @@ class dimension_reduction:
         '''
         check whether model is already fitted
         '''
-        if self.components_ == None:
+        if self.is_fitted:
+            pass
+        else:
             raise Exception("model is not fitted yet!")
     
     def calc_mean(self, X:np.array, verbose:int) -> np.array:
@@ -858,6 +860,7 @@ class dimension_reduction:
         else:
             print("algorithm not implemented (yet)! Using LDA instead")
             self.lda(X, verbose)
+        self.is_fitted = True
         
     def fit_transform(self, X:np.array, algorithm:str, verbose:int = 0, dim:int = None, n_components:int = None, iterations:int = 200, tolerance:float = 1e-4) -> np.array:
         '''
