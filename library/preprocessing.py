@@ -16,11 +16,13 @@ class MinMaxScaler:
         initializes:
             - min: Minimum to None
             - max: Maximum to None
+            - is_fitted: whether scaler is fitted or not to False [Boolean]
         Returns:
             - None
         '''
         self.min = None
         self.max = None
+        self.is_fitted = False
         self._imports()
         
     def _imports(self) -> None:
@@ -39,7 +41,9 @@ class MinMaxScaler:
         '''
         check whether model is already fitted
         '''
-        if (self.min == None) or (self.max == None):
+        if self.is_fitted:
+            pass
+        else:
             raise Exception("scaler is not fitted yet!")
     
     def get_min_max(self, X:np.array):
@@ -64,6 +68,7 @@ class MinMaxScaler:
         ## make sure X is numpy.array
         X = np.array(X)
         self.get_min_max(X)
+        self.is_fitted = True
         
     def fit_transform(self, X:np.array) -> np.array:
         '''
