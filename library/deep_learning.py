@@ -44,7 +44,7 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
     Parameters:
         - x: x values to process [numpy.array]
         - y: y values that are wanted - "ground truth" [numpy.array]
-        - mode: mode of the activation function. Possible values are [String]
+        - mode: mode of the loss function. Possible values are [String]
             - L1-norm Loss --> "l1"
             - L2-norm Loss --> "l2" = default
             - Mean squared Error --> "mse"
@@ -116,7 +116,7 @@ class NeuralNetwork(object):
             - tuple containing two values:
                 - z_s: forwarded x-values [List of Floats]
                 - a_s: activation values [List of Floats]
-        '''
+        '''    
         ## copy sequence to make sure not to override the original data
         a = np.copy(x)
         ## init forwarded x values and activation values
@@ -126,7 +126,7 @@ class NeuralNetwork(object):
         for i in range(len(self.weights)):
             ## get desired activation function
             activation_function = get_activation_function(self.activations[i])
-            ## calc current z and current a            
+            ## calc current z and current a       
             z_s.append(self.weights[i].dot(a) + self.biases[i])
             a = activation_function(z_s[-1])
             a_s.append(a)
@@ -143,7 +143,9 @@ class NeuralNetwork(object):
             - tuple containing two values:
                 - dw: derivate of the weights (dA/dW) [List of Floats]
                 - db: derivate of the biases (dA/dB) [List of Floats]
-        '''
+        '''    
+        ## get batch_size as being the shape of y
+        batch_size = y.shape[1]
         ## init dA/dW -> activation_function with respect to weights
         dw = []
         ## init dA/dB -> activation_function with respect to biases
@@ -151,15 +153,13 @@ class NeuralNetwork(object):
         ## init dA/dZ -> activation_function with respect to 'error for each layer'
         deltas = [None] * len(self.weights)
         ## get last layer's error
-        derivates = get_activation_function(self.activations[-1], True)(z_s[-1].flatten())
+        derivates = get_activation_function(self.activations[-1], True)(z_s[-1])
         deltas[-1] = ((y-a_s[-1])*derivates)
         ## perform backpropagation
         for i in reversed(range(len(deltas)-1)):
             ## get errors of all other layers
-            derivates = get_activation_function(self.activations[i], True)(z_s[i]).flatten().reshape(z_s[i].shape)
-            deltas[i] = self.weights[i+1].T.dot(deltas[i+1])*derivates        
-        ## get batch_size as being the shape of y
-        batch_size = y.shape[1]
+            derivates = get_activation_function(self.activations[i], True)(z_s[i])
+            deltas[i] = self.weights[i+1].T.dot(deltas[i+1])*derivates  
         ## get the derivates respect to weight matrix and biases
         db = [d.dot(np.ones((batch_size,1)))/float(batch_size) for d in deltas]
         dw = [d.dot(a_s[i].T)/float(batch_size) for i,d in enumerate(deltas)]
@@ -180,8 +180,6 @@ class NeuralNetwork(object):
         ## fit scaler, scale y data
         self.scaler.fit(y.T)
         y = self.scaler.transform(y.T).T
-        ## init loss to be infinity
-        loss = np.infty
         ## init the bar to show the progress
         pbar = tqdm(total = epochs)
         for e in range(epochs): 
