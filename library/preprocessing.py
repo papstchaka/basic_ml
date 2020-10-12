@@ -4,6 +4,44 @@ implements preprocessing for data
 
 import numpy as np
 
+def train_test_split(x:np.array, y:np.array = [], train_size:float = 0.75, random_state:int = 42, shuffle:bool = True) -> tuple:
+    '''
+    Split arrays or matrices into random train and test subsets
+    Parameters:
+        - x: x array to split [numpy.array]
+        - y: y array to split (like x) [numpy.array, default = []]
+        - train_size: size of the train set [Float, default = 0.75]
+        - random_state: random state for shuffling [Integer, default = 42]
+        - shuffle: whether (=True, default) to shuffle or not (=False) [Boolean]
+    Returns:
+        - tuple containing [Tuple]
+            - X_train: x train array [numpy.array]
+            - X_test: x test array [numpy.array]
+            - y_train: y train array [numpy.array, default = None]
+            - y_test: y test array [numpy.array, default = None]
+    '''
+    ## set random seed
+    np.random.seed(random_state)
+    ## get the index where dataset gets splitte
+    idx = np.ceil(train_size * x.__len__()).astype(int)
+    indices = [i for i in range(x.__len__())]
+    if shuffle:
+        indices = np.random.permutation(x.__len__())
+    train = indices[:idx]
+    test = indices[idx:]
+    ## when y array given
+    if y.__len__() > 0:
+        ## check length of both arrays
+        assert len(x) == len(y)
+        X_train = x[train]
+        X_test = x[test]
+        y_train = y[train]
+        y_test = y[test]
+        return (X_train, X_test, y_train, y_test)
+    X_train = x[train]
+    X_test = x[test]
+    return (X_train, X_test)
+
 class MinMaxScaler:
     
     '''
