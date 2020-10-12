@@ -2,12 +2,14 @@
 implements Deep Learning using Neural Networks
 '''
 
+## Imports
 from autograd import elementwise_grad
 import autograd.numpy as np
 from tqdm.notebook import tqdm
 import plotly.offline as py
 import plotly.graph_objs as go
-from .preprocessing import MinMaxScaler
+from .preprocessing import train_test_split
+import abc
 
 def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> object:
     '''
@@ -27,7 +29,7 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
     elif mode == "tanh":
         y = lambda x: ( np.exp(x) - np.exp(-x) ) / ( np.exp(x) + np.exp(-x) )
     elif mode == "relu":
-        y = lambda x: x if x>0 else 0
+        y = lambda x: np.max(x,0)
     elif mode == "leaky-relu":
         y = lambda x: np.max([0.1*x,x])
     else:
@@ -54,118 +56,288 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
         - loss: calculated loss [Float]
     '''
     if mode == "l1":
-        return np.sum( np.abs(x - y) )
+        return np.sum( np.abs(x - y), axis=-1)
     elif mode == "l2":
-        return np.sum(( x - y )**2 )
+        return np.sum(( x - y )**2, axis=-1)
     elif mode == "mse":
-        return np.sum(( x - y )**2 ) / x.__len__()
+        return np.sum(( x - y )**2, axis=-1 ) / x.__len__()
     elif mode == "mae":
-        return np.sum( np.abs(x - y) ) / x.__len__()
+        return np.sum( np.abs(x - y), axis=-1 ) / x.__len__()
     elif mode == "rmse":
-        return np.sqrt(np.sum(( x - y )**2 ) / x.__len__())
+        return np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
     elif mode == "cross-entropy": ## classification
         return - ( np.sum( x*np.log(y) + (1-x) * np.log(1-y) ) )
     else:
         print('Unknown loss function. L2 is used')
-        return np.sum(( x - y )**2 )
+        return np.sum(( x - y )**2, axis=-1 )
         
-
-
-class NeuralNetwork(object):
+class Layer(abc.ABC):
     '''
-    class for implementation of a simple Neural Network, containing training function, feedforward and backward propagation
+    abstract class for each kind of different layer. Each layer must be able to do two things
+        - forward step -> output = layer.forward(input)
+        - backpropagation -> grad_input = layer.backward(input, grad_output)
+    some also learn parameters -> updating them during layer.backward
     '''
     
-    def __init__(self, layers:list = [1, 100, 1], activations:list = []) -> None:
+    @abc.abstractmethod
+    def __init__(self) -> None:
         '''
-        constructor of class
+        force all layer to have an __init__ function to handle possible layer parameters
         Parameters:
-            - layers: to be the layers given by user [List of Integers, default = [1, 100, 1]]. construction is usually [input_layer, different amount of hidden layers, ..., output_layer]
-            - activations: to be the desired activation functions [List of Strings, default = []]. If not set by user, will be initialized as "sigmoid"s for all layers
-        initializes:
-            - layers
-            - activations - checks whether number of activation functions is same as number of layers
-            - weights: to be a list filled with random values in the shape of current and following layer [List]
-            - biases: to be a list filled with random values in the shape of current and following layer [List]
-            - scaler: for scaling the data [object]
+            - None
+        Initializes:
+            - None
         Returns:
             - None
         '''
-        ## init the activation functions if not set by user
-        if activations.__len__() == 0:
-            activations = ["sigmoid" for _ in range(layers.__len__()-1)]
-        ## checks whether user provided enough activation functions
-        assert(len(layers) == len(activations)+1)
-        self.layers = layers
-        self.activations = activations
-        ## init biases and weights
-        self.weights = []
-        self.biases = []
-        for i in range(len(layers)-1):
-            self.weights.append(np.random.randn(layers[i+1], layers[i]))
-            self.biases.append(np.random.randn(layers[i+1], 1))
-        ## init scaler
-        self.scaler = MinMaxScaler()
+        pass
     
-    def feedforward(self, x:np.array) -> tuple:
+    @abc.abstractmethod
+    def forward(self, input:np.array) -> np.array:
         '''
-        feedforward function of the network, provides the forward step during each iteration
+        force all layer to have forward pass. Does forward step. Dummy layer's forward step just returns input
         Parameters:
-            - x: x-values to train the network on = X_train [numpy.array]
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
         Returns:
-            - tuple containing two values:
-                - z_s: forwarded x-values [List of Floats]
-                - a_s: activation values [List of Floats]
-        '''    
-        ## copy sequence to make sure not to override the original data
-        a = np.copy(x)
-        ## init forwarded x values and activation values
-        z_s = []
-        a_s = [a]
-        ## go through all the layers (excluding the output layer)
-        for i in range(len(self.weights)):
-            ## get desired activation function
-            activation_function = get_activation_function(self.activations[i])
-            ## calc current z and current a       
-            z_s.append(self.weights[i].dot(a) + self.biases[i])
-            a = activation_function(z_s[-1])
-            a_s.append(a)
-        return (z_s, a_s)
+            - output: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        return input
     
-    def backpropagation(self, y:np.array, z_s:list, a_s:list) -> tuple:
+    @abc.abstractmethod
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:       
         '''
-        backpropagation function of the network, provides the backward step during each iteration
+        force all layer to have backward pass. Does backpropagation. Dummy layer's backpropagation returns grad_output. Perform chain rule:
+        ## d_loss / d_x = (d_loss / d_layer) * (d_layer / d_x) ##
+        --> only multiply grad_output with d_layer / d_x
+        also update parameters (if layer has) using d_loss / d_layer
         Parameters:
-            - y: y values (=ground truth that shall be regressed) to train the network on = y_train [numpy.array]
-            - z_s: forwarded x values [List of Floats]
-            - a_s: activation values [List of Floats]
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
         Returns:
-            - tuple containing two values:
-                - dw: derivate of the weights (dA/dW) [List of Floats]
-                - db: derivate of the biases (dA/dB) [List of Floats]
-        '''    
-        ## get batch_size as being the shape of y
-        batch_size = y.shape[1]
-        ## init dA/dW -> activation_function with respect to weights
-        dw = []
-        ## init dA/dB -> activation_function with respect to biases
-        db = []
-        ## init dA/dZ -> activation_function with respect to 'error for each layer'
-        deltas = [None] * len(self.weights)
-        ## get last layer's error
-        derivates = get_activation_function(self.activations[-1], True)(z_s[-1])
-        deltas[-1] = ((y-a_s[-1])*derivates)
-        ## perform backpropagation
-        for i in reversed(range(len(deltas)-1)):
-            ## get errors of all other layers
-            derivates = get_activation_function(self.activations[i], True)(z_s[i])
-            deltas[i] = self.weights[i+1].T.dot(deltas[i+1])*derivates  
-        ## get the derivates respect to weight matrix and biases
-        db = [d.dot(np.ones((batch_size,1)))/float(batch_size) for d in deltas]
-        dw = [d.dot(a_s[i].T)/float(batch_size) for i,d in enumerate(deltas)]
-        return dw, db
+            - output: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        num_units = input.shape[1]
+        d_layer_d_input = np.eye(num_units)
+        return np.dot(grad_output, d_layer_d_input)
+    
+class ReLU(Layer):
+    '''
+    Rectified Unit Layer. Applies elementwise ReLU to all inputs. Converts all negative values to 0
+    f(x) = max(0, input)
+    '''
+    
+    def __init__(self) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - None
+        Initializes:
+            - None
+        Returns:
+            - None
+        '''
+        pass
+    
+    def forward(self, input:np.array) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+        Returns:
+            - relu_forward: output of shape (batch_size, output_layer_len) [numpy.array]
+            - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array] - same as relu_forward
+        '''
+        relu_forward = np.maximum(0, input)
+        ac_forward = relu_forward.copy()
+        return relu_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        relu_grad = input > 0
+        grad_input = grad_output * relu_grad
+        return grad_input
+    
+class Dense(Layer):
+    '''
+    Performs a learned affine transformation.
+    f(x) = <W*x> + b
+    '''
+    
+    def __init__(self, input_units:int, output_units:int, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+        '''
+        constructor of class
+        Parameters:
+            - input_units: number of neurons needed to process input (length of input sequence) [Integer]
+            - output_units: number of neurons for output (desired number of 'hidden_layers') [Integer]
+            - lr: learning rate for backpropagation [Float, default = 0.1]
+            - activation_function: mode of the activation function. Possible values are [String]
+                - Sigmoid-function --> "sigmoid"
+                - Tangens hyperbolicus --> "tanh"
+                - Rectified Linear Unit --> "relu"
+                - Leaky Rectified Linear Unit --> "leaky-relu"
+        Initializes:
+            - lr
+            - weights to be a contain random samples from a normal (Gaussian) distribution [numpy.array]
+            - biases to be an array of Zeros [numpy.array]
+            - faf: forward activation function [object]
+            - baf: backward activation function [object]
+        Returns:
+            - None
+        '''
+        self.lr = lr
+        self.weights = np.random.normal(loc = 0.0, scale = np.sqrt( 2 / (input_units + output_units) ), size = (input_units, output_units))
+        self.biases = np.zeros(output_units)
+        self.faf = get_activation_function(activation_function)
+        self.baf = get_activation_function(activation_function, True)
+    
+    def forward(self, input:np.array) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+        Returns:
+            - dense_forward: output of shape (batch_size, output_layer_len) [numpy.array]
+            - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array]
+        '''
+        dense_forward = np.dot(input,self.weights) + self.biases
+        ac_forward = self.faf(dense_forward)
+        return dense_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        derivates = self.baf(input)
+        grad_input = np.dot(grad_output, self.weights.T) * derivates
+        ## compute gradient w.r.t. weights and biases
+        grad_weights = np.dot(input.T, grad_output)
+        grad_biases = grad_output.mean(axis = 0) * input.shape[0]
+        ## check whether dimensions of new weights and biases are correct
+        assert grad_weights.shape == self.weights.shape
+        assert grad_biases.shape == self.biases.shape
+        ## Update weights and biases
+        self.weights = self.weights + self.lr * grad_weights
+        self.biases = self.biases + self.lr * grad_biases
+        return grad_input
+    
+class NeuralNetwork():
+    '''
+    class for each kind of different neural network. Must be able to do three things
+        - forward step -> output = layer.forward(input)
+        - train -> train the network on given TrainData
+        - predict -> predict a new sample
+    '''
+    
+    def __init__(self, network:list) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - network: a list with all layers that the network shall contain [List]
+        Initializes:
+            - network
+        Returns:
+            - None
+        '''
+        self.network = network
         
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, lr:float = 0.01) -> None:
+    def check_scaled_data(self, data:np.array) -> None:
+        '''
+        function that checks whether the given data is in range(0,1). Throws error if not
+        Parameters:
+            - data: data points to evaluate
+        Returns:
+            - None
+        '''
+        minimum = np.min(data)
+        maximum = np.max(data)
+        if (minimum < 0) or (maximum > 1):
+            raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
+    
+    def forward(self, X:np.array) -> list:
+        '''
+        Compute activations of all network layers by applying them sequentially
+        Parameters:
+            - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+        Returns:
+            - activations: List of activations for each layer [List]
+        '''
+        ## init list of forwards, activations, set input for first layer
+        forwards = []
+        activations = []
+        input = X
+        ## Looping through all layer
+        for l in self.network:
+            f_s, a_s = l.forward(input)
+            forwards.append(f_s)
+            activations.append(a_s)
+            ## set inut for next layer
+            input = activations[-1]
+        ## make sure length of activations and forwards is same as number of layers
+        assert len(activations) == len(self.network)
+        assert len(forwards) == len(self.network)
+        return forwards, activations
+    
+    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+        '''
+        performs networks training on given batches
+        Parameters:
+            - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
+            - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+        Returns:
+            - None
+        '''
+        ## get layer activations
+        layer_forwards, layer_activations = self.forward(X_train)
+        ## layer[i] is the input for network[i]
+        layer_inputs = [X_train] + layer_forwards
+        ## prediction for this batch
+        y_pred = layer_activations[-1]
+        ## get last layer's error
+        derivate = get_activation_function(derivate = True)(layer_inputs[-1])
+        ## calculate loss
+        loss_grad = (y_train - y_pred) * derivate
+        ## make backpropagation backwards through the network
+        for layer_index in range(len(self.network))[::-1]:
+            layer = self.network[layer_index]
+            ## update loss_grad, also updates the weights and biases
+            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+    
+    def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
+        '''
+        makes a list of minibatches
+        Parameters:
+            - x: x-values to train the network on [numpy.array]
+            - y: y-values for loss calculation (= ground truth) [numpy.array]
+            - batch_size: size of every batch [Integer, default = 10]
+            - shuffle: whether (=True, default) or not (=False) to shuffle the data [Boolean]
+        Returns:
+            - Tuple of x_batch [numpy.array] and y_batch [numpy.array] [tuple]
+        '''
+        ## make sure x and y have same length
+        assert len(x) == len(y)
+        if shuffle:
+            ## shuffle indize
+            indices = np.random.permutation(len(x))
+        for start_idx in range(0, len(x) - batch_size + 1, batch_size):
+            if shuffle:
+                excerpt = indices[start_idx : start_idx + batch_size]
+            else:
+                excerpt = slice(start_idx, start_idx + batch_size)
+            yield x[excerpt], y[excerpt]
+    
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -173,39 +345,48 @@ class NeuralNetwork(object):
             - y: y-values for loss calculation (= ground truth) [numpy.array]
             - batch_size: size of every batch [Integer, default = 10]
             - epochs: number of epochs to perform the training on [Integer, default = 100]
-            - lr: learning rate for the gradient descent during new calculation of weights and biases [Float, default = 0.01 = 1e-2]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
         Returns:
             - None
         '''
-        ## fit scaler, scale y data
-        self.scaler.fit(y.T)
-        y = self.scaler.transform(y.T).T
+        ## check whether data is scaled into range(0,1)
+        self.check_scaled_data(y)
+        ## split datasets
+        X_train, X_test, y_train, y_test = train_test_split(x, y)
         ## init the bar to show the progress
         pbar = tqdm(total = epochs)
         for e in range(epochs): 
-            ## start with index 0 to get through all x- and y-values with batch size
-            i = 0
-            ## as long as end is not reached
-            while(i < len(y)):
-                ## get current x- and y-batch
-                x_batch = x[i:i+batch_size]
-                y_batch = y[i:i+batch_size]
-                ## update index
-                i = i + batch_size
-                ## perform feedforward step
-                z_s, a_s = self.feedforward(x_batch)
-                ## perform backpropagation step
-                dw, db = self.backpropagation(y_batch, z_s, a_s)
-                ## update weights and biases
-                self.weights = [w + lr * dweight for w,dweight in  zip(self.weights, dw)]
-                self.biases = [w + lr * dbias for w,dbias in  zip(self.biases, db)]
+            ## go through batches
+            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
+                self.train_step(x_batch, y_batch)
+            ## predict x train and x test
+            train_pred = self.predict_step(X_train)
+            test_pred = self.predict_step(X_test)
             ## update the loss
-            loss = loss_function(a_s[-1], y_batch)
+            train_loss = loss_function(train_pred, y_train, loss_func)
+            test_loss = loss_function(test_pred, y_test, loss_func)
             ## update progress of training
-            pbar.set_description(f'Epoch: {e}; Loss: {loss}')
+            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
             pbar.update(1)
             
-    def predict(self, x_test:np.array, y_test:np.array, verbose:int = 0) -> np.array:
+    
+    def predict_step(self, X_test:np.array) -> np.array:
+        '''
+        does prediction of new data
+        Parameters:
+            - X_test: unknown sample [numpy.array]
+        Returns:
+            - y_pred: predicted 'regressed' data points [numpy.array]
+        '''
+        _, y_preds = self.forward(X_test)
+        return y_preds[-1]
+    
+    def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0) -> np.array:
         '''
         performs the prediction of x using the network
         Parameters:
@@ -217,17 +398,13 @@ class NeuralNetwork(object):
         Returns:
             - y_pred: predicted y-values [numpy.array]
         '''
-        ## perform forward step
-        _, a_s = self.feedforward(x_test)
         ## get y_pred
-        y_pred = a_s[-1]
-        ## unscale the data again
-        y_pred = self.scaler.inverse_transform(y_pred.T).T
+        y_pred = self.predict_step(X_test)
         ## if shall be shown
         if verbose > 0:
             data = []
-            data.append(go.Scatter(x=x_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
-            data.append(go.Scatter(x=x_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
+            data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
+            data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
             fig = go.Figure(data)
             py.iplot(fig)
         return y_pred
