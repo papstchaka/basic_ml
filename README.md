@@ -21,7 +21,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
 >   - <a href="library/preprocessing.py" target="_blank">`preprocessing.py`</a> containing classes for data preprocessing
 
-## Functionalities that are already implemented (state of 09.10.2020):
+## Functionalities that are already implemented (state of 12.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
 >   - Clustering <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
 >   - Dimension Reduction Algorithms (LDA, PCA and ICA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
@@ -31,7 +31,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
 >   - Deep Learning using Neural Networks <a href="https://www.tensorflow.org/tutorials/keras/classification" target="_blank">`Deep Learning by Tensorflow`</a>
 >   - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
->   - Data Preprocessing for DataSet manipulation (containing a MinMaxScaler) <a href=https://scikit-learn.org/stable/modules/preprocessing.html target="_blank">`Preprocessing by sklearn`</a>
+>   - Data Preprocessing for DataSet manipulation (containing a MinMaxScaler and a train_test_split()-function) <a href=https://scikit-learn.org/stable/modules/preprocessing.html target="_blank">`Preprocessing by sklearn`</a>
 
 ## Usage:
 In general all classes and functions can be used exactly as those which are implemented in <a href="https://scikit-learn.org/stable/" target="_blank">`sklearn`</a> with a `training()`, a `predict()` and a `score()` - if possible - function.
@@ -42,7 +42,7 @@ Algorithms that work exactly as describe above, respectively in their sklearn do
 >   - Dimension Reduction - `train()`, `predict()` and `score()` function are `fit()`, `fit_transform()` and `transform()` respectively
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm -> Classifier
 >   - Gaussian Processes -> Regressor
->   - Deep Learning using Neural Networks - has its one `score()` function with the `loss()` function in training
+>   - Deep Learning using Neural Networks - has its one `score()` function as being the `loss()` function in training
 
 Algorithms with different work-wise:
 >   - Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train()` function implemented, since the user is obliged to self-decide whether or not to use `Q-Learning` or `Action-Value-Iteration`.
