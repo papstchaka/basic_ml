@@ -386,7 +386,7 @@ class NeuralNetwork():
         _, y_preds = self.forward(X_test)
         return y_preds[-1]
     
-    def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0) -> np.array:
+    def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0, markers:bool = False) -> np.array:
         '''
         performs the prediction of x using the network
         Parameters:
@@ -395,6 +395,7 @@ class NeuralNetwork():
             - verbose: how detailed prediction shall be documented. Possible values are [Integer]
                 - 0 -> no plot (default)
                 - 1 -> show plot
+            - markers: whether (=True) or not (=False, default) to use markers instead of a line as plot [Boolean]
         Returns:
             - y_pred: predicted y-values [numpy.array]
         '''
@@ -403,8 +404,12 @@ class NeuralNetwork():
         ## if shall be shown
         if verbose > 0:
             data = []
-            data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
-            data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
+            if markers:
+                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
+                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
+            else:
+                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), name="prediction"))
+                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), name="ground truth"))
             fig = go.Figure(data)
             py.iplot(fig)
         return y_pred
