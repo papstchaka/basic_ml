@@ -381,9 +381,9 @@ class Pooling(Layer):
         ## perform pooling
         for dim in range(num_filt):
             curr_x, out_x = 0, 0
-            while curr_x <= imag_x:
+            while curr_x + self.x <= imag_x:
                 curr_y, out_y = 0, 0
-                while curr_y <= imag_y:
+                while curr_y + self.y <= imag_y:
                     if self.pooling_mode == "max":
                         pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
                     elif self.pooling_mode == "avg":
@@ -391,9 +391,9 @@ class Pooling(Layer):
                     else:
                         print("this pooling mode is not implemented (yet)! Using MaxPool instead!")
                         pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                    curr_y += self.y
+                    curr_y += 1
                     out_y += 1
-                curr_x += self.x
+                curr_x += 1
                 out_x += 1
         ac_forward = pool_forward.copy()
         return pool_forward, ac_forward
