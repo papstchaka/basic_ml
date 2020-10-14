@@ -243,11 +243,12 @@ class Convolution(Layer):
     Performs filtering on the given input using a learned filter (=pattern)
     '''
     
-    def __init__(self, filters:np.array, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+    def __init__(self, filters:int, kernel_size:tuple = (2,2,1), lr:float = 0.1, activation_function:str = "sigmoid") -> None:
         '''
         constructor of class
         Parameters:
-            - filters: initial filter to use with shape (num_filters, x_dim, y_dim, z_dim) [numpy.array]
+            - filters: number of filters to use [Integer]
+            - kernel_size: 2 Integers, specifying height, width and depth of the filters [Tuple, default = (2,2,1)]
             - lr: learning rate for backpropagation [Float, default = 0.1]
             - activation_function: mode of the activation function. Possible values are [String]
                 - Sigmoid-function --> "sigmoid"
@@ -256,21 +257,22 @@ class Convolution(Layer):
                 - Leaky Rectified Linear Unit --> "leaky-relu"
         Initializes:
             - lr
-            - filters - are equivalents to weights
+            - filters
+            - kernel_size
+            - weights: to be an emtpy array [numpy.array]
             - biases to be an array of Zeros [numpy.array]
             - faf: forward activation function [object]
-            - baf: backward activation function [object]
-            - (num_filt, filt_x, filt_y, filt_z): dimensions of the filters [Integers]
+            - baf: backward activation function [object][Integers]
         Returns:
             - None
         '''
         self.lr = lr
         self.filters = filters
-        self.biases = np.zeros((filters.shape[0],1))
+        self.kernel_size = kernel_size
+        self.weights = np.array([])
+        self.biases = np.zeros((filters,1))
         self.faf = get_activation_function(activation_function)
         self.baf = get_activation_function(activation_function, True)
-        ## get filter dimensions
-        self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters.shape
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -281,6 +283,9 @@ class Convolution(Layer):
             - conv_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
         '''
+        if self.weights.__len__() == 0:
+            self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters, *self.kernel_size
+            self.weights = np.random.normal(loc = 0, scale = 2/np.sqrt(np.prod((self.num_filt, self.filt_x, self.filt_y, self.filt_z))), size = (self.num_filt, self.filt_x, self.filt_y, self.filt_z))
         ## get image dimensions
         imag_x, imag_y, imag_z = input.shape
         ## calc output dimensions
@@ -288,13 +293,13 @@ class Convolution(Layer):
         assert imag_z == self.filt_z
         ## init output
         conv_forward = np.zeros((self.num_filt, out_x, out_y))
-        ## convolve the filter over every part of the image, adding the bias at each step
+        ## convolve the filter (weights) over every part of the image, adding the bias at each step
         for curr_f in range(self.num_filt):
             curr_x = 0
             while curr_x + self.filt_x <= imag_x:
                 curr_y = 0
                 while curr_y + self.filt_y <= imag_y:
-                    conv_forward[curr_f, curr_x, curr_y] = np.sum(self.filters[curr_f] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
+                    conv_forward[curr_f, curr_x, curr_y] = np.sum(self.weights[curr_f] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
                     curr_y += 1
                 curr_x += 1
         conv_forward /= (out_x * out_y)
@@ -314,7 +319,7 @@ class Convolution(Layer):
         imag_x, imag_y, imag_z = input.shape
         ## init output
         grad_input = np.zeros(input.shape)
-        grad_filters = np.zeros(self.filters.shape)
+        grad_filters = np.zeros(self.weights.shape)
         grad_biases = np.zeros((self.num_filt, 1))
         ## get derivates of activation function
         derivates = self.baf(input)
@@ -324,16 +329,16 @@ class Convolution(Layer):
             while curr_x + self.filt_x <= imag_x:
                 curr_y = 0
                 while curr_y + self.filt_y <= imag_y:
-                    ## loss gradient of filter (for filter update)
+                    ## loss gradient of weights (for weights update)
                     grad_filters[curr_f] += grad_output[curr_f, curr_x, curr_y] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]
                     ## loss gradient of input to convolution operation
-                    grad_input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] += grad_output[curr_f, curr_x, curr_y] * self.filters[curr_f]
+                    grad_input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] += grad_output[curr_f, curr_x, curr_y] * self.weights[curr_f]
                     curr_y += 1
                 curr_x += 1
             ## loss gradient of bias
             grad_biases[curr_f] = np.sum(grad_output[curr_f])
-        ## Update filters and biases
-        self.filters = self.filters + self.lr * grad_filters
+        ## Update weights and biases
+        self.weights = self.weights + self.lr * grad_filters
         self.biases = self.biases + self.lr * grad_biases
         return grad_input*derivates
     
