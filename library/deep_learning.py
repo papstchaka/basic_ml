@@ -238,6 +238,233 @@ class Dense(Layer):
         self.biases = self.biases + self.lr * grad_biases
         return grad_input
     
+class Convolution(Layer):
+    '''
+    Performs filtering on the given input using a learned filter (=pattern)
+    '''
+    
+    def __init__(self, filters:np.array, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+        '''
+        constructor of class
+        Parameters:
+            - filters: initial filter to use with shape (num_filters, x_dim, y_dim, z_dim) [numpy.array]
+            - lr: learning rate for backpropagation [Float, default = 0.1]
+            - activation_function: mode of the activation function. Possible values are [String]
+                - Sigmoid-function --> "sigmoid"
+                - Tangens hyperbolicus --> "tanh"
+                - Rectified Linear Unit --> "relu"
+                - Leaky Rectified Linear Unit --> "leaky-relu"
+        Initializes:
+            - lr
+            - filters - are equivalents to weights
+            - biases to be an array of Zeros [numpy.array]
+            - faf: forward activation function [object]
+            - baf: backward activation function [object]
+            - (num_filt, filt_x, filt_y, filt_z): dimensions of the filters [Integers]
+        Returns:
+            - None
+        '''
+        self.lr = lr
+        self.filters = filters
+        self.biases = np.zeros((filters.shape[0],1))
+        self.faf = get_activation_function(activation_function)
+        self.baf = get_activation_function(activation_function, True)
+        ## get filter dimensions
+        self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters.shape
+    
+    def forward(self, input:np.array) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        Returns:
+            - conv_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        '''
+        ## get image dimensions
+        imag_x, imag_y, imag_z = input.shape
+        ## calc output dimensions
+        out_x, out_y = (imag_x - self.filt_x) + 1, (imag_y - self.filt_y) + 1
+        assert imag_z == self.filt_z
+        ## init output
+        conv_forward = np.zeros((self.num_filt, out_x, out_y))
+        ## convolve the filter over every part of the image, adding the bias at each step
+        for curr_f in range(self.num_filt):
+            curr_x = 0
+            while curr_x + self.filt_x <= imag_x:
+                curr_y = 0
+                while curr_y + self.filt_y <= imag_y:
+                    conv_forward[curr_f, curr_x, curr_y] = np.sum(self.filters[curr_f] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
+                    curr_y += 1
+                curr_x += 1
+        conv_forward /= (out_x * out_y)
+        ac_forward = self.faf(conv_forward)
+        return conv_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        ## get image dimensions
+        imag_x, imag_y, imag_z = input.shape
+        ## init output
+        grad_input = np.zeros(input.shape)
+        grad_filters = np.zeros(self.filters.shape)
+        grad_biases = np.zeros((self.num_filt, 1))
+        ## get derivates of activation function
+        derivates = self.baf(input)
+        ## make backpropagation
+        for curr_f in range(self.num_filt):
+            curr_x = 0
+            while curr_x + self.filt_x <= imag_x:
+                curr_y = 0
+                while curr_y + self.filt_y <= imag_y:
+                    ## loss gradient of filter (for filter update)
+                    grad_filters[curr_f] += grad_output[curr_f, curr_x, curr_y] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]
+                    ## loss gradient of input to convolution operation
+                    grad_input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] += grad_output[curr_f, curr_x, curr_y] * self.filters[curr_f]
+                    curr_y += 1
+                curr_x += 1
+            ## loss gradient of bias
+            grad_biases[curr_f] = np.sum(grad_output[curr_f])
+        ## Update filters and biases
+        self.filters = self.filters + self.lr * grad_filters
+        self.biases = self.biases + self.lr * grad_biases
+        return grad_input*derivates
+    
+class Pooling(Layer):
+    '''
+    Performs Pooling (Max or Average) on the given input
+    '''
+    
+    def __init__(self, filter_size:tuple = (2,2), pooling_mode:str = "max") -> None:
+        '''
+        constructor of class
+        Parameters:
+            - filter_size: size of filter to shove over given image dimension (x,y) [Tuple, default = (2,2)]
+            - pooling_mode: mode of pooling. Possible values are [String]
+                - MaxPooling -> "max" (default)
+                - AveragePooling -> "avg"
+        Initializes:
+            - x: first element of filter_size [Integer]
+            - y: second element of filter_size [Integer]
+            - pooling_mode
+        Returns:
+            - None
+        '''
+        self.x, self.y = filter_size
+        self.pooling_mode = pooling_mode
+
+    def forward(self, input:np.array) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        Returns:
+            - pool_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        '''
+        num_filt, imag_x, imag_y = input.shape
+        ## calc output dimensions
+        out_x, out_y = (imag_x - self.x) + 1, (imag_y - self.y) + 1
+        pool_forward = np.zeros((out_x, out_y, num_filt))
+        ## perform pooling
+        for dim in range(num_filt):
+            curr_x, out_x = 0, 0
+            while curr_x <= imag_x:
+                curr_y, out_y = 0, 0
+                while curr_y <= imag_y:
+                    if self.pooling_mode == "max":
+                        pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                    elif self.pooling_mode == "avg":
+                        pool_forward[out_x, out_y, dim] = np.mean(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                    else:
+                        print("this pooling mode is not implemented (yet)! Using MaxPool instead!")
+                        pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                    curr_y += self.y
+                    out_y += 1
+                curr_x += self.x
+                out_x += 1
+        ac_forward = pool_forward.copy()
+        return pool_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        '''
+        ## get image dimensions
+        num_filt, imag_x, imag_y = input.shape
+        ## init output
+        grad_input = np.zeros(input.shape)
+        ## make backpropagation
+        for dim in range(num_filt):
+            curr_x, out_x = 0, 0
+            while curr_x + self.x <= imag_x:
+                curr_y, out_y = 0, 0
+                while curr_y + self.y <= imag_y:
+                    ## obtain index of largest value in input for current window
+                    idx = np.nanargmax(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                    (x, y) = np.unravel_index(idx, input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y].shape)
+                    ## set value to output
+                    grad_input[dim, out_x+x, out_y+y] = grad_output[curr_x, curr_y, dim]
+                    curr_y += self.y
+                    out_y += 1
+                curr_x += self.x
+                out_x += 1
+        return grad_input
+    
+class FullyConnected(Layer):
+    '''
+    performs the dimension reduction -> wrapping the input to dimension 1
+    '''
+    
+    def __init__(self, batch_size:int) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - batch_size: size of given batches
+        Initializes:
+            - batch_size
+        Returns:
+            - None
+        '''
+        self.batch_size = batch_size
+    
+    def forward(self, input:np.array) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        Returns:
+            - fullyconn_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - ac_forward: output after activation function (batch_size, -1) [numpy.array]
+        '''
+        ## reshape data
+        fullyconn_forward = input.reshape(self.batch_size, -1)
+        ac_forward = fullyconn_forward.copy()
+        return fullyconn_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, -1) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, -1) [numpy.array]
+        '''
+        return grad_output.reshape(input.shape)
+    
 class NeuralNetwork():
     '''
     class for each kind of different neural network. Must be able to do three things
