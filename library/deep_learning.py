@@ -170,11 +170,10 @@ class Dense(Layer):
     f(x) = <W*x> + b
     '''
     
-    def __init__(self, input_units:int, output_units:int, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+    def __init__(self, output_units:int, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
         '''
         constructor of class
         Parameters:
-            - input_units: number of neurons needed to process input (length of input sequence) [Integer]
             - output_units: number of neurons for output (desired number of 'hidden_layers') [Integer]
             - lr: learning rate for backpropagation [Float, default = 0.1]
             - activation_function: mode of the activation function. Possible values are [String]
@@ -184,7 +183,8 @@ class Dense(Layer):
                 - Leaky Rectified Linear Unit --> "leaky-relu"
         Initializes:
             - lr
-            - weights to be a contain random samples from a normal (Gaussian) distribution [numpy.array]
+            - output_units
+            - weights to be an empty numpy.array [numpy.array]
             - biases to be an array of Zeros [numpy.array]
             - faf: forward activation function [object]
             - baf: backward activation function [object]
@@ -192,7 +192,8 @@ class Dense(Layer):
             - None
         '''
         self.lr = lr
-        self.weights = np.random.normal(loc = 0.0, scale = np.sqrt( 2 / (input_units + output_units) ), size = (input_units, output_units))
+        self.output_units = output_units
+        self.weights = np.array([])
         self.biases = np.zeros(output_units)
         self.faf = get_activation_function(activation_function)
         self.baf = get_activation_function(activation_function, True)
@@ -206,6 +207,10 @@ class Dense(Layer):
             - dense_forward: output of shape (batch_size, output_layer_len) [numpy.array]
             - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array]
         '''
+        ## if weights are not properly initiated yet
+        if self.weights.__len__() == 0:
+            _, input_units = input.shape
+            self.weights = np.random.normal(loc = 0.0, scale = np.sqrt( 2 / (input_units + self.output_units) ), size = (input_units, self.output_units))
         dense_forward = np.dot(input,self.weights) + self.biases
         ac_forward = self.faf(dense_forward)
         return dense_forward, ac_forward
@@ -219,6 +224,7 @@ class Dense(Layer):
         Returns:
             - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
         '''
+        ## get derivates of activation function
         derivates = self.baf(input)
         grad_input = np.dot(grad_output, self.weights.T) * derivates
         ## compute gradient w.r.t. weights and biases
@@ -279,11 +285,9 @@ class NeuralNetwork():
         input = X
         ## Looping through all layer
         for l in self.network:
-            f_s, a_s = l.forward(input)
+            f_s, input = l.forward(input)
             forwards.append(f_s)
-            activations.append(a_s)
-            ## set inut for next layer
-            input = activations[-1]
+            activations.append(input)
         ## make sure length of activations and forwards is same as number of layers
         assert len(activations) == len(self.network)
         assert len(forwards) == len(self.network)
