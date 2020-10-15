@@ -93,6 +93,13 @@ class Layer(abc.ABC):
         pass
     
     @abc.abstractmethod
+    def __name__(self) -> str:
+        '''
+        forces all layers to have a __name__ to get to know the layers name
+        '''
+        return "layer"
+
+    @abc.abstractmethod
     def forward(self, input:np.array) -> np.array:
         '''
         force all layer to have forward pass. Does forward step. Dummy layer's forward step just returns input
@@ -137,6 +144,12 @@ class ReLU(Layer):
             - None
         '''
         pass
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "ReLu"
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -197,6 +210,12 @@ class Dense(Layer):
         self.biases = np.zeros(output_units)
         self.faf = get_activation_function(activation_function)
         self.baf = get_activation_function(activation_function, True)
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "Dense"
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -273,6 +292,12 @@ class Convolution(Layer):
         self.biases = np.zeros((filters,1))
         self.faf = get_activation_function(activation_function)
         self.baf = get_activation_function(activation_function, True)
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "Convolution"
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -366,6 +391,12 @@ class Pooling(Layer):
         self.x, self.y = filter_size
         self.pooling_mode = pooling_mode
 
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "Pooling"
+
     def forward(self, input:np.array) -> np.array:
         '''
         forward step
@@ -442,6 +473,12 @@ class FullyConnected(Layer):
         Returns:
             - None
         '''
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "FullyConnected"
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -490,6 +527,28 @@ class NeuralNetwork(abc.ABC):
             - None
         '''
         self.network = network
+
+    @abc.abstractmethod
+    def __name__(self) -> str:
+        '''
+        forces all neural networks to have a __name__ to get to know the layers name
+        '''
+        return "NeuralNetwork"
+        
+    @abc.abstractmethod
+    def check_scaled_data(self, data:np.array) -> None:
+        '''
+        Force all neural networks to have a check_scaled_data() function
+        function that checks whether the given data is in range(0,1). Throws error if not
+        Parameters:
+            - data: data points to evaluate
+        Returns:
+            - None
+        '''
+        minimum = np.min(data)
+        maximum = np.max(data)
+        if (minimum < 0) or (maximum > 1):
+            raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
     
     @abc.abstractmethod        
     def forward(self, X:np.array) -> list:
@@ -543,16 +602,52 @@ class NeuralNetwork(abc.ABC):
             loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
     
     @abc.abstractmethod       
-    def train(self) -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
         '''
         Force all neural networks to have a train() function
-        performs the training of the network for all steps (= epochs). Does nothing
+        performs the training of the network for all steps (= epochs)
         Parameters:
-            - None
+            - x: x-values to train the network on [numpy.array]
+            - y: y-values for loss calculation (= ground truth) [numpy.array]
+            - batch_size: size of every batch [Integer, default = 10]
+            - epochs: number of epochs to perform the training on [Integer, default = 100]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
         Returns:
             - None
         '''
-        pass
+        if "Convolution" in [n.__name__() for n in self.network]:
+            ## Convolution layer does scaling of data, so you don't need to check this
+            pass
+        else:
+            ## check whether data is scaled into range(0,1)
+            if self.__name__() == "RegressorNetwork": ## then scale y values
+                self.check_scaled_data(y)
+            elif self.__name__() == "ClassifierNetwork": ## then scale x values
+                self.check_scaled_data(x)
+            else:
+                raise Exception("NeuralNetwork type does not exist (yet)!")
+        ## split datasets
+        X_train, X_test, y_train, y_test = train_test_split(x, y)
+        ## init the bar to show the progress
+        pbar = tqdm(total = epochs)
+        for e in range(epochs): 
+            ## go through batches
+            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
+                self.train_step(x_batch, y_batch)
+            ## predict x train and x test
+            train_pred = self.predict_step(X_train)
+            test_pred = self.predict_step(X_test)
+            ## update the loss
+            train_loss = loss_function(train_pred, y_train, loss_func)
+            test_loss = loss_function(test_pred, y_test, loss_func)
+            ## update progress of training
+            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
+            pbar.update(1)
     
     @abc.abstractmethod       
     def predict_step(self, X_test:np.array) -> np.array:
@@ -598,6 +693,12 @@ class RegressorNetwork(NeuralNetwork):
             - None
         '''
         super().__init__(network)
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "RegressorNetwork"
         
     def check_scaled_data(self, data:np.array) -> None:
         '''
@@ -607,10 +708,145 @@ class RegressorNetwork(NeuralNetwork):
         Returns:
             - None
         '''
-        minimum = np.min(data)
-        maximum = np.max(data)
-        if (minimum < 0) or (maximum > 1):
-            raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
+        super().check_scaled_data(data)
+
+    def forward(self, X:np.array) -> list:
+        '''
+        Compute activations of all network layers by applying them sequentially
+        Parameters:
+            - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+        Returns:
+            - activations: List of activations for each layer [List]
+        '''
+        return super().forward(X)
+    
+    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+        '''
+        performs networks training on given batches
+        Parameters:
+            - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
+            - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+        Returns:
+            - None
+        '''
+        super().train_step(X_train, y_train)
+    
+    def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
+        '''
+        makes a list of minibatches
+        Parameters:
+            - x: x-values to train the network on [numpy.array]
+            - y: y-values for loss calculation (= ground truth) [numpy.array]
+            - batch_size: size of every batch [Integer, default = 10]
+            - shuffle: whether (=True, default) or not (=False) to shuffle the data [Boolean]
+        Returns:
+            - Tuple of x_batch [numpy.array] and y_batch [numpy.array] [tuple]
+        '''
+        ## make sure x and y have same length
+        assert len(x) == len(y)
+        if shuffle:
+            ## shuffle indize
+            indices = np.random.permutation(len(x))
+        for start_idx in range(0, len(x) - batch_size + 1, batch_size):
+            if shuffle:
+                excerpt = indices[start_idx : start_idx + batch_size]
+            else:
+                excerpt = slice(start_idx, start_idx + batch_size)
+            yield x[excerpt], y[excerpt]
+    
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
+        '''
+        performs the training of the network for all steps (= epochs)
+        Parameters:
+            - x: x-values to train the network on [numpy.array]
+            - y: y-values for loss calculation (= ground truth) [numpy.array]
+            - batch_size: size of every batch [Integer, default = 10]
+            - epochs: number of epochs to perform the training on [Integer, default = 100]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+        Returns:
+            - None
+        '''
+        super().train(x, y, batch_size, epochs, loss_func)
+            
+    
+    def predict_step(self, X_test:np.array) -> np.array:
+        '''
+        does prediction of new data
+        Parameters:
+            - X_test: unknown sample [numpy.array]
+        Returns:
+            - y_pred: predicted 'regressed' data points [numpy.array]
+        '''
+        return super().predict_step(X_test)
+    
+    def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0, markers:bool = False) -> np.array:
+        '''
+        performs the prediction of x using the network
+        Parameters:
+            - x_test: x-values to predict [numpy.array]
+            - y_test: y-values for loss calculation (= ground truth) [numpy.array]
+            - verbose: how detailed prediction shall be documented. Possible values are [Integer]
+                - 0 -> no plot (default)
+                - 1 -> show plot
+            - markers: whether (=True) or not (=False, default) to use markers instead of a line as plot [Boolean]
+        Returns:
+            - y_pred: predicted y-values [numpy.array]
+        '''
+        ## get y_pred
+        y_pred = self.predict_step(X_test)
+        ## if shall be shown
+        if verbose > 0:
+            data = []
+            if markers:
+                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
+                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
+            else:
+                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), name="prediction"))
+                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), name="ground truth"))
+            fig = go.Figure(data)
+            py.iplot(fig)
+        return y_pred
+
+class ClassifierNetwork(NeuralNetwork):
+    '''
+    class for each kind of different classifier neural network. Must be able to do three things
+        - forward step -> output = layer.forward(input)
+        - train -> train the network on given TrainData
+        - predict -> predict a new sample
+    '''
+    
+    def __init__(self, network:list) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - network: a list with all layers that the network shall contain [List]
+        Initializes:
+            - network
+        Returns:
+            - None
+        '''
+        super().__init__(network)
+
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "ClassifierNetwork"
+        
+    def check_scaled_data(self, data:np.array) -> None:
+        '''
+        function that checks whether the given data is in range(0,1). Throws error if not
+        Parameters:
+            - data: data points to evaluate
+        Returns:
+            - None
+        '''
+        super().check_scaled_data(data)
     
     def forward(self, X:np.array) -> list:
         '''
@@ -673,25 +909,7 @@ class RegressorNetwork(NeuralNetwork):
         Returns:
             - None
         '''
-        ## check whether data is scaled into range(0,1)
-        self.check_scaled_data(y)
-        ## split datasets
-        X_train, X_test, y_train, y_test = train_test_split(x, y)
-        ## init the bar to show the progress
-        pbar = tqdm(total = epochs)
-        for e in range(epochs): 
-            ## go through batches
-            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
-                self.train_step(x_batch, y_batch)
-            ## predict x train and x test
-            train_pred = self.predict_step(X_train)
-            test_pred = self.predict_step(X_test)
-            ## update the loss
-            train_loss = loss_function(train_pred, y_train, loss_func)
-            test_loss = loss_function(test_pred, y_test, loss_func)
-            ## update progress of training
-            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
-            pbar.update(1)
+        super().train(x, y, batch_size, epochs, loss_func)
             
     
     def predict_step(self, X_test:np.array) -> np.array:
@@ -704,30 +922,15 @@ class RegressorNetwork(NeuralNetwork):
         '''
         return super().predict_step(X_test)
     
-    def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0, markers:bool = False) -> np.array:
+    def predict(self, X_test:np.array, y_test:np.array) -> np.array:
         '''
         performs the prediction of x using the network
         Parameters:
             - x_test: x-values to predict [numpy.array]
             - y_test: y-values for loss calculation (= ground truth) [numpy.array]
-            - verbose: how detailed prediction shall be documented. Possible values are [Integer]
-                - 0 -> no plot (default)
-                - 1 -> show plot
-            - markers: whether (=True) or not (=False, default) to use markers instead of a line as plot [Boolean]
         Returns:
             - y_pred: predicted y-values [numpy.array]
         '''
         ## get y_pred
         y_pred = self.predict_step(X_test)
-        ## if shall be shown
-        if verbose > 0:
-            data = []
-            if markers:
-                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), mode="markers", marker_size=8, name="prediction"))
-                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), mode="markers", marker_size=8, name="ground truth"))
-            else:
-                data.append(go.Scatter(x=X_test.flatten(), y=y_pred.flatten(), name="prediction"))
-                data.append(go.Scatter(x=X_test.flatten(), y=y_test.flatten(), name="ground truth"))
-            fig = go.Figure(data)
-            py.iplot(fig)
         return y_pred
