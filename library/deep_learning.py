@@ -52,6 +52,7 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
             - Mean squared Error --> "mse"
             - Mean absolute Error --> "mae"
             - Root mean squared Error --> "rmse"
+            - Cross Entropy (for classification) --> "cross-entropy"
     Returns:
         - loss: calculated loss [Float]
     '''
@@ -262,12 +263,12 @@ class Convolution(Layer):
     Performs filtering on the given input using a learned filter (=pattern)
     '''
     
-    def __init__(self, filters:int, kernel_size:tuple = (2,2,1), lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+    def __init__(self, filters:int, kernel_size:tuple = (2,2), lr:float = 0.1, activation_function:str = "sigmoid") -> None:
         '''
         constructor of class
         Parameters:
             - filters: number of filters to use [Integer]
-            - kernel_size: 2 Integers, specifying height, width and depth of the filters [Tuple, default = (2,2,1)]
+            - kernel_size: 2 Integers, specifying height and width of the filters [Tuple, default = (2,2)]
             - lr: learning rate for backpropagation [Float, default = 0.1]
             - activation_function: mode of the activation function. Possible values are [String]
                 - Sigmoid-function --> "sigmoid"
@@ -309,7 +310,7 @@ class Convolution(Layer):
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
         '''
         if self.weights.__len__() == 0:
-            self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters, *self.kernel_size
+            self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters, *self.kernel_size, input.shape[-1]
             self.weights = np.random.normal(loc = 0, scale = 2/np.sqrt(np.prod((self.num_filt, self.filt_x, self.filt_y, self.filt_z))), size = (self.num_filt, self.filt_x, self.filt_y, self.filt_z))
         ## get image dimensions
         batch_size, imag_x, imag_y, imag_z = input.shape
@@ -617,6 +618,7 @@ class NeuralNetwork(abc.ABC):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
             - None
         '''
@@ -768,6 +770,7 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
             - None
         '''
@@ -906,6 +909,7 @@ class ClassifierNetwork(NeuralNetwork):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
             - None
         '''
