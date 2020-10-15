@@ -268,7 +268,7 @@ class Convolution(Layer):
         constructor of class
         Parameters:
             - filters: number of filters to use [Integer]
-            - kernel_size: 2 Integers, specifying height and width of the filters [Tuple, default = (2,2)]
+            - kernel_size: Integer/Tuple, specifying height and width of the filters [Tuple, default = (2,2)]
             - lr: learning rate for backpropagation [Float, default = 0.1]
             - activation_function: mode of the activation function. Possible values are [String]
                 - Sigmoid-function --> "sigmoid"
@@ -288,7 +288,7 @@ class Convolution(Layer):
         '''
         self.lr = lr
         self.filters = filters
-        self.kernel_size = kernel_size
+        self.kernel_size = kernel_size if isinstance(kernel_size, tuple) else (kernel_size, kernel_size)
         self.weights = np.array([])
         self.biases = np.zeros((filters,1))
         self.faf = get_activation_function(activation_function)
@@ -576,15 +576,22 @@ class NeuralNetwork(abc.ABC):
         return forwards, activations
     
     @abc.abstractmethod    
-    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+    def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
         Force all neural networks to have a train_step() function
         performs networks training on given batches
         Parameters:
             - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
             - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
-            - None
+            - train_loss: trainings loss for current batch [Float]
         '''
         ## get layer activations
         layer_forwards, layer_activations = self.forward(X_train)
@@ -595,12 +602,14 @@ class NeuralNetwork(abc.ABC):
         ## get last layer's error
         derivate = get_activation_function(derivate = True)(layer_inputs[-1])
         ## calculate loss
+        loss = loss_function(y_train, y_pred, loss_func)
         loss_grad = (y_train - y_pred) * derivate
         ## make backpropagation backwards through the network
         for layer_index in range(len(self.network))[::-1]:
             layer = self.network[layer_index]
             ## update loss_grad, also updates the weights and biases
             loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+        return loss
     
     @abc.abstractmethod       
     def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
@@ -635,20 +644,20 @@ class NeuralNetwork(abc.ABC):
                 raise Exception("NeuralNetwork type does not exist (yet)!")
         ## split datasets
         X_train, X_test, y_train, y_test = train_test_split(x, y)
+        ## init test loss
+        test_loss = np.infty
         ## init the bar to show the progress
         pbar = tqdm(total = epochs)
         for e in range(epochs): 
             ## go through batches
             for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
-                self.train_step(x_batch, y_batch)
-            ## predict x train and x test
-            train_pred = self.predict_step(X_train)
+                train_loss = self.train_step(x_batch, y_batch, loss_func)
+                ## update progress of training
+                pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
+            ## predict x test
             test_pred = self.predict_step(X_test)
             ## update the loss
-            train_loss = loss_function(train_pred, y_train, loss_func)
             test_loss = loss_function(test_pred, y_test, loss_func)
-            ## update progress of training
-            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
             pbar.update(1)
     
     @abc.abstractmethod       
@@ -722,16 +731,23 @@ class RegressorNetwork(NeuralNetwork):
         '''
         return super().forward(X)
     
-    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+    def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
         performs networks training on given batches
         Parameters:
             - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
             - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
-            - None
+            - train_loss: trainings loss for current batch [Float]
         '''
-        super().train_step(X_train, y_train)
+        return super().train_step(X_train, y_train, loss_func)
     
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
@@ -861,16 +877,23 @@ class ClassifierNetwork(NeuralNetwork):
         '''
         return super().forward(X)
     
-    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+    def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
         performs networks training on given batches
         Parameters:
             - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
             - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2", (default)
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+                - Cross Entropy (for classification) --> "cross-entropy"
         Returns:
-            - None
+            - train_loss: trainings loss for current batch [Float]
         '''
-        super().train_step(X_train, y_train)
+        return super().train_step(X_train, y_train, loss_func)
     
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
