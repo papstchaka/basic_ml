@@ -287,19 +287,19 @@ class Convolution(Layer):
             self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters, *self.kernel_size
             self.weights = np.random.normal(loc = 0, scale = 2/np.sqrt(np.prod((self.num_filt, self.filt_x, self.filt_y, self.filt_z))), size = (self.num_filt, self.filt_x, self.filt_y, self.filt_z))
         ## get image dimensions
-        imag_x, imag_y, imag_z = input.shape
+        batch_size, imag_x, imag_y, imag_z = input.shape
         ## calc output dimensions
         out_x, out_y = (imag_x - self.filt_x) + 1, (imag_y - self.filt_y) + 1
         assert imag_z == self.filt_z
         ## init output
-        conv_forward = np.zeros((self.num_filt, out_x, out_y))
+        conv_forward = np.zeros((batch_size, self.num_filt, out_x, out_y))
         ## convolve the filter (weights) over every part of the image, adding the bias at each step
         for curr_f in range(self.num_filt):
             curr_x = 0
             while curr_x + self.filt_x <= imag_x:
                 curr_y = 0
                 while curr_y + self.filt_y <= imag_y:
-                    conv_forward[curr_f, curr_x, curr_y] = np.sum(self.weights[curr_f] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
+                    conv_forward[:, curr_f, curr_x, curr_y] = np.sum(self.weights[curr_f] * input[:, curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
                     curr_y += 1
                 curr_x += 1
         conv_forward /= (out_x * out_y)
@@ -316,7 +316,7 @@ class Convolution(Layer):
             - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
         '''
         ## get image dimensions
-        imag_x, imag_y, imag_z = input.shape
+        batch_size, imag_x, imag_y, imag_z = input.shape
         ## init output
         grad_input = np.zeros(input.shape)
         grad_filters = np.zeros(self.weights.shape)
@@ -324,19 +324,20 @@ class Convolution(Layer):
         ## get derivates of activation function
         derivates = self.baf(input)
         ## make backpropagation
-        for curr_f in range(self.num_filt):
-            curr_x = 0
-            while curr_x + self.filt_x <= imag_x:
-                curr_y = 0
-                while curr_y + self.filt_y <= imag_y:
-                    ## loss gradient of weights (for weights update)
-                    grad_filters[curr_f] += grad_output[curr_f, curr_x, curr_y] * input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]
-                    ## loss gradient of input to convolution operation
-                    grad_input[curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] += grad_output[curr_f, curr_x, curr_y] * self.weights[curr_f]
-                    curr_y += 1
-                curr_x += 1
+        for batch in range(batch_size):
+            for curr_f in range(self.num_filt):
+                curr_x = 0
+                while curr_x + self.filt_x <= imag_x:
+                    curr_y = 0
+                    while curr_y + self.filt_y <= imag_y:
+                        ## loss gradient of weights (for weights update)
+                        grad_filters[curr_f] += input[batch, curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] * grad_output[batch, curr_f, curr_x, curr_y]
+                        ## loss gradient of input to convolution operation
+                        grad_input[batch, curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :] += grad_output[batch, curr_f, curr_x, curr_y] * self.weights[curr_f]
+                        curr_y += 1
+                    curr_x += 1
             ## loss gradient of bias
-            grad_biases[curr_f] = np.sum(grad_output[curr_f])
+            grad_biases[curr_f] = np.sum(grad_output[:, curr_f])
         ## Update weights and biases
         self.weights = self.weights + self.lr * grad_filters
         self.biases = self.biases + self.lr * grad_biases
@@ -374,27 +375,26 @@ class Pooling(Layer):
             - pool_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
         '''
-        num_filt, imag_x, imag_y = input.shape
+        batch_size, num_filt, imag_x, imag_y = input.shape
         ## calc output dimensions
         out_x, out_y = (imag_x - self.x) + 1, (imag_y - self.y) + 1
-        pool_forward = np.zeros((out_x, out_y, num_filt))
+        pool_forward = np.zeros((batch_size, out_x, out_y, num_filt))
         ## perform pooling
-        for dim in range(num_filt):
-            curr_x, out_x = 0, 0
-            while curr_x + self.x <= imag_x:
-                curr_y, out_y = 0, 0
-                while curr_y + self.y <= imag_y:
-                    if self.pooling_mode == "max":
-                        pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                    elif self.pooling_mode == "avg":
-                        pool_forward[out_x, out_y, dim] = np.mean(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                    else:
-                        print("this pooling mode is not implemented (yet)! Using MaxPool instead!")
-                        pool_forward[out_x, out_y, dim] = np.max(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                    curr_y += 1
-                    out_y += 1
-                curr_x += 1
-                out_x += 1
+        for batch in range(batch_size):
+            for dim in range(num_filt):
+                curr_x = 0
+                while curr_x + self.x <= imag_x:
+                    curr_y = 0
+                    while curr_y + self.y <= imag_y:
+                        if self.pooling_mode == "max":
+                            pool_forward[batch, curr_x, curr_y, dim] = np.max(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                        elif self.pooling_mode == "avg":
+                            pool_forward[batch, curr_x, curr_y, dim] = np.mean(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                        else:
+                            print("this pooling mode is not implemented (yet)! Using MaxPool instead!")
+                            pool_forward[batch, curr_x, curr_y, dim] = np.max(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                        curr_y += 1
+                    curr_x += 1
         ac_forward = pool_forward.copy()
         return pool_forward, ac_forward
     
@@ -408,24 +408,25 @@ class Pooling(Layer):
             - grad_input: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
         '''
         ## get image dimensions
-        num_filt, imag_x, imag_y = input.shape
+        batch_size, num_filt, imag_x, imag_y = input.shape
         ## init output
         grad_input = np.zeros(input.shape)
         ## make backpropagation
-        for dim in range(num_filt):
-            curr_x, out_x = 0, 0
-            while curr_x + self.x <= imag_x:
-                curr_y, out_y = 0, 0
-                while curr_y + self.y <= imag_y:
-                    ## obtain index of largest value in input for current window
-                    idx = np.nanargmax(input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                    (x, y) = np.unravel_index(idx, input[dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y].shape)
-                    ## set value to output
-                    grad_input[dim, out_x+x, out_y+y] = grad_output[curr_x, curr_y, dim]
-                    curr_y += self.y
-                    out_y += 1
-                curr_x += self.x
-                out_x += 1
+        for batch in range(batch_size):
+            for dim in range(num_filt):
+                curr_x, out_x = 0, 0
+                while curr_x + self.x <= imag_x:
+                    curr_y, out_y = 0, 0
+                    while curr_y + self.y <= imag_y:
+                        ## obtain index of largest value in input for current window
+                        idx = np.nanargmax(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                        (x, y) = np.unravel_index(idx, input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y].shape)
+                        ## set value to output
+                        grad_input[batch, dim, out_x+x, out_y+y] = grad_output[batch, curr_x, curr_y, dim]
+                        curr_y += self.y
+                        out_y += 1
+                    curr_x += self.x
+                    out_x += 1
         return grad_input
     
 class FullyConnected(Layer):
@@ -433,17 +434,14 @@ class FullyConnected(Layer):
     performs the dimension reduction -> wrapping the input to dimension 1
     '''
     
-    def __init__(self, batch_size:int) -> None:
+    def __init__(self) -> None:
         '''
         constructor of class
-        Parameters:
-            - batch_size: size of given batches
         Initializes:
-            - batch_size
+            - None
         Returns:
             - None
         '''
-        self.batch_size = batch_size
     
     def forward(self, input:np.array) -> np.array:
         '''
@@ -455,7 +453,8 @@ class FullyConnected(Layer):
             - ac_forward: output after activation function (batch_size, -1) [numpy.array]
         '''
         ## reshape data
-        fullyconn_forward = input.reshape(self.batch_size, -1)
+        batch_size, (*_) = input.shape
+        fullyconn_forward = input.reshape(batch_size, -1)
         ac_forward = fullyconn_forward.copy()
         return fullyconn_forward, ac_forward
     
@@ -470,16 +469,18 @@ class FullyConnected(Layer):
         '''
         return grad_output.reshape(input.shape)
     
-class NeuralNetwork():
+class NeuralNetwork(abc.ABC):
     '''
-    class for each kind of different neural network. Must be able to do three things
+    abstract class for each kind of different neural network. Must be able to do three things
         - forward step -> output = layer.forward(input)
         - train -> train the network on given TrainData
         - predict -> predict a new sample
     '''
     
+    @abc.abstractmethod
     def __init__(self, network:list) -> None:
         '''
+        Force all neural networks to have an __init__() (=constructor) function
         constructor of class
         Parameters:
             - network: a list with all layers that the network shall contain [List]
@@ -489,22 +490,11 @@ class NeuralNetwork():
             - None
         '''
         self.network = network
-        
-    def check_scaled_data(self, data:np.array) -> None:
-        '''
-        function that checks whether the given data is in range(0,1). Throws error if not
-        Parameters:
-            - data: data points to evaluate
-        Returns:
-            - None
-        '''
-        minimum = np.min(data)
-        maximum = np.max(data)
-        if (minimum < 0) or (maximum > 1):
-            raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
     
+    @abc.abstractmethod        
     def forward(self, X:np.array) -> list:
         '''
+        Force all neural networks to have a forward() function
         Compute activations of all network layers by applying them sequentially
         Parameters:
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
@@ -525,8 +515,10 @@ class NeuralNetwork():
         assert len(forwards) == len(self.network)
         return forwards, activations
     
+    @abc.abstractmethod    
     def train_step(self, X_train:np.array, y_train:np.array) -> None:
         '''
+        Force all neural networks to have a train_step() function
         performs networks training on given batches
         Parameters:
             - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
@@ -549,6 +541,97 @@ class NeuralNetwork():
             layer = self.network[layer_index]
             ## update loss_grad, also updates the weights and biases
             loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+    
+    @abc.abstractmethod       
+    def train(self) -> None:
+        '''
+        Force all neural networks to have a train() function
+        performs the training of the network for all steps (= epochs). Does nothing
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        pass
+    
+    @abc.abstractmethod       
+    def predict_step(self, X_test:np.array) -> np.array:
+        '''
+        Force all neural networks to have a predict_step() function
+        does prediction of new data
+        Parameters:
+            - X_test: unknown sample [numpy.array]
+        Returns:
+            - y_pred: predicted 'regressed' data points [numpy.array]
+        '''
+        _, y_preds = self.forward(X_test)
+        return y_preds[-1]
+    
+    @abc.abstractmethod       
+    def predict(self) -> None:
+        '''
+        Force all neural networks to have a predict() function
+        performs the prediction of x using the network. Does nothing
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        pass
+    
+class RegressorNetwork(NeuralNetwork):
+    '''
+    class for each kind of different regressor neural network. Must be able to do three things
+        - forward step -> output = layer.forward(input)
+        - train -> train the network on given TrainData
+        - predict -> predict a new sample
+    '''
+    
+    def __init__(self, network:list) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - network: a list with all layers that the network shall contain [List]
+        Initializes:
+            - network
+        Returns:
+            - None
+        '''
+        super().__init__(network)
+        
+    def check_scaled_data(self, data:np.array) -> None:
+        '''
+        function that checks whether the given data is in range(0,1). Throws error if not
+        Parameters:
+            - data: data points to evaluate
+        Returns:
+            - None
+        '''
+        minimum = np.min(data)
+        maximum = np.max(data)
+        if (minimum < 0) or (maximum > 1):
+            raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
+    
+    def forward(self, X:np.array) -> list:
+        '''
+        Compute activations of all network layers by applying them sequentially
+        Parameters:
+            - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+        Returns:
+            - activations: List of activations for each layer [List]
+        '''
+        return super().forward(X)
+    
+    def train_step(self, X_train:np.array, y_train:np.array) -> None:
+        '''
+        performs networks training on given batches
+        Parameters:
+            - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
+            - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+        Returns:
+            - None
+        '''
+        super().train_step(X_train, y_train)
     
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
@@ -619,8 +702,7 @@ class NeuralNetwork():
         Returns:
             - y_pred: predicted 'regressed' data points [numpy.array]
         '''
-        _, y_preds = self.forward(X_test)
-        return y_preds[-1]
+        return super().predict_step(X_test)
     
     def predict(self, X_test:np.array, y_test:np.array, verbose:int = 0, markers:bool = False) -> np.array:
         '''
