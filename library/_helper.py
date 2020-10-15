@@ -90,7 +90,7 @@ class _classifier(abc.ABC):
             - score: calculated score [Float]
         '''
         ## make sure to have as many predicted data points as actual ones
-        assert(y_test.__len__() == y_pred.__len__())
+        assert(y_test.__len__() == y_pred.__len__()), "y_test and y_pred must have same length"
         ## make sure y_test and y_pred are actually numpy.arrays
         y_test = np.array(y_test)
         y_pred = np.array(y_pred)
@@ -171,7 +171,7 @@ class _regressor(abc.ABC):
             - score: calculated score [Float]
         '''
         ## make sure to have as many predicted data points as actual ones
-        assert(y_test.__len__() == y_pred.__len__())
+        assert(y_test.__len__() == y_pred.__len__()), "y_test and y_pred must have same length"
         ## make sure y_test and y_pred are actually numpy.arrays
         y_test = np.array(y_test)
         y_pred = np.array(y_pred)
