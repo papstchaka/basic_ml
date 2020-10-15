@@ -251,8 +251,8 @@ class Dense(Layer):
         grad_weights = np.dot(input.T, grad_output)
         grad_biases = grad_output.mean(axis = 0) * input.shape[0]
         ## check whether dimensions of new weights and biases are correct
-        assert grad_weights.shape == self.weights.shape
-        assert grad_biases.shape == self.biases.shape
+        assert grad_weights.shape == self.weights.shape, "gradient of weights must match dimensionality of weights"
+        assert grad_biases.shape == self.biases.shape, "gradient of biases must match dimensionality of biases"
         ## Update weights and biases
         self.weights = self.weights + self.lr * grad_weights
         self.biases = self.biases + self.lr * grad_biases
@@ -316,7 +316,7 @@ class Convolution(Layer):
         batch_size, imag_x, imag_y, imag_z = input.shape
         ## calc output dimensions
         out_x, out_y = (imag_x - self.filt_x) + 1, (imag_y - self.filt_y) + 1
-        assert imag_z == self.filt_z
+        assert imag_z == self.filt_z, "depth of image must match depth of filters"
         ## init output
         conv_forward = np.zeros((batch_size, self.num_filt, out_x, out_y))
         ## convolve the filter (weights) over every part of the image, adding the bias at each step
@@ -378,7 +378,7 @@ class Pooling(Layer):
         '''
         constructor of class
         Parameters:
-            - filter_size: size of filter to shove over given image dimension (x,y) [Tuple, default = (2,2)]
+            - filter_size: Integer/Tuple, specifying size of filter to shove over given image dimension (x,y) [Tuple, default = (2,2)]
             - pooling_mode: mode of pooling. Possible values are [String]
                 - MaxPooling -> "max" (default)
                 - AveragePooling -> "avg"
@@ -389,7 +389,7 @@ class Pooling(Layer):
         Returns:
             - None
         '''
-        self.x, self.y = filter_size
+        self.x, self.y = filter_size if isinstance(filter_size, tuple) else (filter_size, filter_size)
         self.pooling_mode = pooling_mode
 
     def __name__(self) -> str:
@@ -571,8 +571,8 @@ class NeuralNetwork(abc.ABC):
             forwards.append(f_s)
             activations.append(input)
         ## make sure length of activations and forwards is same as number of layers
-        assert len(activations) == len(self.network)
-        assert len(forwards) == len(self.network)
+        assert len(activations) == len(self.network), "length of forward passed data must match length of layers"
+        assert len(forwards) == len(self.network), "length of forward passed data must match length of layers"
         return forwards, activations
     
     @abc.abstractmethod    
@@ -761,7 +761,7 @@ class RegressorNetwork(NeuralNetwork):
             - Tuple of x_batch [numpy.array] and y_batch [numpy.array] [tuple]
         '''
         ## make sure x and y have same length
-        assert len(x) == len(y)
+        assert len(x) == len(y), "x and y data streams must have same length"
         if shuffle:
             ## shuffle indize
             indices = np.random.permutation(len(x))
@@ -907,7 +907,7 @@ class ClassifierNetwork(NeuralNetwork):
             - Tuple of x_batch [numpy.array] and y_batch [numpy.array] [tuple]
         '''
         ## make sure x and y have same length
-        assert len(x) == len(y)
+        assert len(x) == len(y), "x and y data streams must have same length"
         if shuffle:
             ## shuffle indize
             indices = np.random.permutation(len(x))

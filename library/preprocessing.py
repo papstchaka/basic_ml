@@ -32,7 +32,7 @@ def train_test_split(x:np.array, y:np.array = [], train_size:float = 0.75, rando
     ## when y array given
     if y.__len__() > 0:
         ## check length of both arrays
-        assert len(x) == len(y)
+        assert len(x) == len(y), "x and y data streams must have same length"
         X_train = x[train]
         X_test = x[test]
         y_train = y[train]
