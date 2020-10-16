@@ -29,9 +29,11 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
     elif mode == "tanh":
         y = lambda x: ( np.exp(x) - np.exp(-x) ) / ( np.exp(x) + np.exp(-x) )
     elif mode == "relu":
-        y = lambda x: np.max(x,0)
+        y = lambda x: np.where(x <= 0, 0.0, 1.0) * x
     elif mode == "leaky-relu":
-        y = lambda x: np.max([0.1*x,x])
+        y = lambda x: np.where(x <= 0, 0.1, 1.0) * x
+    elif mode == "softmax":
+        y = lambda x: np.exp(x-x.max()) / ( (np.exp(x-x.max()) / np.sum(np.exp(x-x.max()))) )
     else:
         print('Unknown activation function. linear is used')
         y = lambda x: x
@@ -53,6 +55,7 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False
             - Mean absolute Error --> "mae"
             - Root mean squared Error --> "rmse"
             - Cross Entropy (for classification) --> "cross-entropy"
+            - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy"
         - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
     Returns:
         - loss: calculated loss [Float]
@@ -68,7 +71,9 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False
     elif mode == "rmse":
         fx = lambda x,y: np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
     elif mode == "cross-entropy": ## classification
-        fx = lambda x,y: - ( np.sum( x*np.log(y) + (1-x) * np.log(1-y) ) )
+        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7)) + (1-x) * np.log(np.clip(1-y, 1e-7, 1-1e-7))) / x.__len__()
+    elif mode == "categorical-cross-entropy": ## multi-class classifaction
+        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
     else:
         print('Unknown loss function. L2 is used')
         fx = lambda x,y: np.sum(( x - y )**2, axis=-1 )
@@ -190,12 +195,12 @@ class Dense(Layer):
     f(x) = <W*x> + b
     '''
     
-    def __init__(self, output_units:int, lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+    def __init__(self, output_units:int, lr:float = 1e-3, activation_function:str = "sigmoid") -> None:
         '''
         constructor of class
         Parameters:
             - output_units: number of neurons for output (desired number of 'hidden_layers') [Integer]
-            - lr: learning rate for backpropagation [Float, default = 0.1]
+            - lr: learning rate for backpropagation [Float, default = 1e-3]
             - activation_function: mode of the activation function. Possible values are [String]
                 - Sigmoid-function --> "sigmoid"
                 - Tangens hyperbolicus --> "tanh"
@@ -270,13 +275,13 @@ class Convolution(Layer):
     Performs filtering on the given input using a learned filter (=pattern)
     '''
     
-    def __init__(self, filters:int, kernel_size:tuple = (2,2), lr:float = 0.1, activation_function:str = "sigmoid") -> None:
+    def __init__(self, filters:int, kernel_size:tuple = (2,2), lr:float = 1e-3, activation_function:str = "sigmoid") -> None:
         '''
         constructor of class
         Parameters:
             - filters: number of filters to use [Integer]
             - kernel_size: Integer/Tuple, specifying height and width of the filters [Tuple, default = (2,2)]
-            - lr: learning rate for backpropagation [Float, default = 0.1]
+            - lr: learning rate for backpropagation [Float, default = 1e-3]
             - activation_function: mode of the activation function. Possible values are [String]
                 - Sigmoid-function --> "sigmoid"
                 - Tangens hyperbolicus --> "tanh"
@@ -328,14 +333,15 @@ class Convolution(Layer):
         ## init output
         conv_forward = np.zeros((batch_size, self.num_filt, out_x, out_y))
         ## convolve the filter (weights) over every part of the image, adding the bias at each step
-        for curr_f in range(self.num_filt):
-            curr_x = 0
-            while curr_x + self.filt_x <= imag_x:
-                curr_y = 0
-                while curr_y + self.filt_y <= imag_y:
-                    conv_forward[:, curr_f, curr_x, curr_y] = np.sum(self.weights[curr_f] * input[:, curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
-                    curr_y += 1
-                curr_x += 1
+        for batch in range(batch_size):
+            for curr_f in range(self.num_filt):
+                curr_x = 0
+                while curr_x + self.filt_x <= imag_x:
+                    curr_y = 0
+                    while curr_y + self.filt_y <= imag_y:
+                        conv_forward[batch, curr_f, curr_x, curr_y] = np.sum(self.weights[curr_f] * input[batch, curr_x:curr_x+self.filt_x, curr_y:curr_y+self.filt_y, :]) + self.biases[curr_f]
+                        curr_y += 1
+                    curr_x += 1
         conv_forward /= (out_x * out_y)
         ac_forward = self.faf(conv_forward)
         return conv_forward, ac_forward
@@ -470,7 +476,7 @@ class Pooling(Layer):
                     out_x += 1
         return grad_input
     
-class FullyConnected(Layer):
+class Flatten(Layer):
     '''
     performs the dimension reduction -> wrapping the input to dimension 1
     '''
@@ -488,7 +494,7 @@ class FullyConnected(Layer):
         '''
         sets name of layer
         '''
-        return "FullyConnected"
+        return "Flatten"
     
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -642,6 +648,7 @@ class NeuralNetwork(abc.ABC):
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
             - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
+            - forwards: List of values for each layer [List]
             - activations: List of activations for each layer [List]
         '''
         ## init list of forwards, activations, set input for first layer
@@ -659,40 +666,16 @@ class NeuralNetwork(abc.ABC):
         return forwards, activations
     
     @abc.abstractmethod    
-    def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
+    def train_step(self) -> None:
         '''
         Force all neural networks to have a train_step() function
-        performs networks training on given batches
+        performs networks training on given batches. Does nothing
         Parameters:
-            - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
-            - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
-            - loss_func: mode of the loss function. Possible values are [String]
-                - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2", (default)
-                - Mean squared Error --> "mse"
-                - Mean absolute Error --> "mae"
-                - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
+            - None
         Returns:
-            - train_loss: trainings loss for current batch [Float]
+            - None
         '''
-        ## get layer activations
-        layer_forwards, layer_activations = self.forward(X_train, True)
-        ## layer[i] is the input for network[i]
-        layer_inputs = [X_train] + layer_forwards
-        ## prediction for this batch
-        y_pred = layer_activations[-1]
-        ## get last layer's error
-        derivate = get_activation_function(derivate = True)(layer_inputs[-1])
-        ## calculate loss
-        loss = loss_function(y_train, y_pred, loss_func)
-        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
-        ## make backpropagation backwards through the network
-        for layer_index in range(len(self.network))[::-1]:
-            layer = self.network[layer_index]
-            ## update loss_grad, also updates the weights and biases
-            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
-        return loss
+        pass
     
     @abc.abstractmethod       
     def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
@@ -734,13 +717,15 @@ class NeuralNetwork(abc.ABC):
         for e in range(epochs): 
             ## go through batches
             for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
-                train_loss = self.train_step(x_batch, y_batch, loss_func)
-                ## update progress of training
-                pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
+                loss = self.train_step(x_batch, y_batch, loss_func)
             ## predict x test
+            train_pred = self.predict_step(X_train)
             test_pred = self.predict_step(X_test)
             ## update the loss
+            train_loss = loss_function(train_pred, y_train, loss_func)
             test_loss = loss_function(test_pred, y_test, loss_func)
+            ## update progress of training
+            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
             pbar.update(1)
     
     @abc.abstractmethod       
@@ -811,6 +796,7 @@ class RegressorNetwork(NeuralNetwork):
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
             - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
+            - forwards: List of values for each layer [List]
             - activations: List of activations for each layer [List]
         '''
         return super().forward(X, training)
@@ -831,8 +817,24 @@ class RegressorNetwork(NeuralNetwork):
         Returns:
             - train_loss: trainings loss for current batch [Float]
         '''
-        return super().train_step(X_train, y_train, loss_func)
-    
+        ## get layer activations
+        layer_forwards, layer_activations = self.forward(X_train, True)
+        ## layer[i] is the input for network[i]
+        layer_inputs = [X_train] + layer_forwards
+        ## prediction for this batch
+        y_pred = layer_activations[-1]
+        ## get last layer's error
+        derivate = get_activation_function("sigmoid", True)(layer_inputs[-1])
+        ## calculate loss
+        loss = loss_function(y_train, y_pred, loss_func)
+        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
+        ## make backpropagation backwards through the network
+        for layer_index in range(len(self.network))[::-1]:
+            layer = self.network[layer_index]
+            ## update loss_grad, also updates the weights and biases
+            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+        return loss
+        
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
         makes a list of minibatches
@@ -958,6 +960,7 @@ class ClassifierNetwork(NeuralNetwork):
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
             - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
+            - forwards: List of values for each layer [List]
             - activations: List of activations for each layer [List]
         '''
         return super().forward(X, training)
@@ -978,8 +981,25 @@ class ClassifierNetwork(NeuralNetwork):
         Returns:
             - train_loss: trainings loss for current batch [Float]
         '''
-        return super().train_step(X_train, y_train, loss_func)
-    
+        ## get layer activations
+        layer_forwards, layer_activations = self.forward(X_train, True)
+        ## layer[i] is the input for network[i]
+        layer_inputs = [X_train] + layer_forwards
+        ## prediction for this batch
+        y_pred = np.argmax(layer_activations[-1],axis=-1).reshape(-1,1)
+        # y_pred = layer_activations[-1]
+        ## get last layer's error
+        derivate = get_activation_function("softmax", derivate = True)(layer_inputs[-1])
+        ## calculate loss
+        loss = loss_function(y_train, y_pred, loss_func)
+        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
+        ## make backpropagation backwards through the network
+        for layer_index in range(len(self.network))[::-1]:
+            layer = self.network[layer_index]
+            ## update loss_grad, also updates the weights and biases
+            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+        return loss
+        
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
         makes a list of minibatches
@@ -1045,4 +1065,4 @@ class ClassifierNetwork(NeuralNetwork):
         '''
         ## get y_pred
         y_pred = self.predict_step(X_test)
-        return y_pred
+        return np.argmax(y_pred)
