@@ -101,11 +101,12 @@ class Layer(abc.ABC):
         return "layer"
 
     @abc.abstractmethod
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         force all layer to have forward pass. Does forward step. Dummy layer's forward step just returns input
         Parameters:
             - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - *args: for further Parameters, mostly unused
         Returns:
             - output: output of shape (batch_size, output_layer_len) [numpy.array]
         '''
@@ -152,11 +153,12 @@ class ReLU(Layer):
         '''
         return "ReLu"
     
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         forward step
         Parameters:
             - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - *args: unused
         Returns:
             - relu_forward: output of shape (batch_size, output_layer_len) [numpy.array]
             - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array] - same as relu_forward
@@ -218,11 +220,12 @@ class Dense(Layer):
         '''
         return "Dense"
     
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         forward step
         Parameters:
             - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - *args: unused
         Returns:
             - dense_forward: output of shape (batch_size, output_layer_len) [numpy.array]
             - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array]
@@ -300,11 +303,12 @@ class Convolution(Layer):
         '''
         return "Convolution"
     
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         forward step
         Parameters:
             - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - *args: unused
         Returns:
             - conv_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
@@ -398,11 +402,12 @@ class Pooling(Layer):
         '''
         return "Pooling"
 
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         forward step
         Parameters:
             - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - *args: unused
         Returns:
             - pool_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
@@ -481,11 +486,12 @@ class FullyConnected(Layer):
         '''
         return "FullyConnected"
     
-    def forward(self, input:np.array) -> np.array:
+    def forward(self, input:np.array, *args) -> np.array:
         '''
         forward step
         Parameters:
             - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - *args: unused
         Returns:
             - fullyconn_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, -1) [numpy.array]
@@ -506,6 +512,78 @@ class FullyConnected(Layer):
             - grad_input: output of shape (batch_size, -1) [numpy.array]
         '''
         return grad_output.reshape(input.shape)
+
+class Dropout(Layer):
+    '''
+    Performs filtering on the given input using a learned filter (=pattern)
+    '''
+    
+    def __init__(self, factor:float) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - factor: how much of the data shall be dropped - in range(0,1) [Float]
+        Initializes:
+            - factor
+            - training: whether (=True) Layer is in use (only during training) or not (=False, default) [Boolean]
+            - scale: how much the data gets rescaled (to keep sum of all data points while dropping some) [np.array]
+        Returns:
+            - None
+        '''   
+        ## make sure factor is in range(0,1)
+        assert (factor < 1) & (factor > 0), "factor must be in between 0 and 1"
+        self.factor = factor
+        self.training = False
+        self.scale = np.array([])
+        
+    def __name__(self) -> str:
+        '''
+        sets name of layer
+        '''
+        return "Dropout"
+        
+    def forward(self, input:np.array, *args) -> np.array:
+        '''
+        forward step
+        Parameters:
+            - input: input of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - *args: whether Layer is in training (=True) mode or in prediction mode (=False) [Boolean]
+        Returns:
+            - drop_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+            - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
+        '''
+        self.training, (*_) = args
+        if self.training:
+            ## get length of flattened input
+            length = input.flatten().__len__()
+            ## get as much zeros as factor * length
+            zeros = np.zeros(int(length * self.factor))
+            ## fill the rest with ones
+            ones = np.ones(length - zeros.__len__())
+            ## concat both, shuffle and reshape to input's shape
+            scale = np.append(ones, zeros)
+            np.random.shuffle(scale)
+            self.scale = scale.reshape(input.shape)
+            drop_forward = input * self.scale
+        else:
+            drop_forward = input.copy()
+        ac_forward = drop_forward.copy()
+        return drop_forward, ac_forward
+    
+    def backward(self, input:np.array, grad_output:np.array) -> np.array:
+        '''
+        backward step
+        Parameters:
+            - input: input of shape (batch_size, input_layer_len) [numpy.array]
+            - grad_output: d_loss / d_layer [numpy.array]
+        Returns:
+            - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
+        '''
+        if self.training:
+            grad_input = grad_output * self.scale
+        else:
+            grad_input = grad_output * input
+        return grad_input
     
 class NeuralNetwork(abc.ABC):
     '''
@@ -552,12 +630,13 @@ class NeuralNetwork(abc.ABC):
             raise Exception("you have to scale the data into range(0,1). Network cannot work with unscaled data!")
     
     @abc.abstractmethod        
-    def forward(self, X:np.array) -> list:
+    def forward(self, X:np.array, training:bool = False) -> list:
         '''
         Force all neural networks to have a forward() function
         Compute activations of all network layers by applying them sequentially
         Parameters:
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+            - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
             - activations: List of activations for each layer [List]
         '''
@@ -567,7 +646,7 @@ class NeuralNetwork(abc.ABC):
         input = X
         ## Looping through all layer
         for l in self.network:
-            f_s, input = l.forward(input)
+            f_s, input = l.forward(input, training)
             forwards.append(f_s)
             activations.append(input)
         ## make sure length of activations and forwards is same as number of layers
@@ -594,7 +673,7 @@ class NeuralNetwork(abc.ABC):
             - train_loss: trainings loss for current batch [Float]
         '''
         ## get layer activations
-        layer_forwards, layer_activations = self.forward(X_train)
+        layer_forwards, layer_activations = self.forward(X_train, True)
         ## layer[i] is the input for network[i]
         layer_inputs = [X_train] + layer_forwards
         ## prediction for this batch
@@ -721,15 +800,16 @@ class RegressorNetwork(NeuralNetwork):
         '''
         super().check_scaled_data(data)
 
-    def forward(self, X:np.array) -> list:
+    def forward(self, X:np.array, training:bool = False) -> list:
         '''
         Compute activations of all network layers by applying them sequentially
         Parameters:
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+            - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
             - activations: List of activations for each layer [List]
         '''
-        return super().forward(X)
+        return super().forward(X, training)
     
     def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
@@ -867,15 +947,16 @@ class ClassifierNetwork(NeuralNetwork):
         '''
         super().check_scaled_data(data)
     
-    def forward(self, X:np.array) -> list:
+    def forward(self, X:np.array, training:bool = False) -> list:
         '''
         Compute activations of all network layers by applying them sequentially
         Parameters:
             - X: X data of shape (batch_size, input_layer_len) [numpy.array]
+            - training: whether network gets trained (=True) or is in prediction mode (=False, default) [Boolean]
         Returns:
             - activations: List of activations for each layer [List]
         '''
-        return super().forward(X)
+        return super().forward(X, training)
     
     def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
