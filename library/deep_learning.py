@@ -40,7 +40,7 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
         return elementwise_grad(y)
     return  y
 
-def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
+def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False) -> float:
     '''
     returns current loss for given x and trained weights and biases
     Parameters:
@@ -53,24 +53,28 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2") -> float:
             - Mean absolute Error --> "mae"
             - Root mean squared Error --> "rmse"
             - Cross Entropy (for classification) --> "cross-entropy"
+        - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
     Returns:
         - loss: calculated loss [Float]
     '''
     if mode == "l1":
-        return np.sum( np.abs(x - y), axis=-1)
+        fx = lambda x,y: np.sum( np.abs(x - y), axis=-1)
     elif mode == "l2":
-        return np.sum(( x - y )**2, axis=-1)
+        fx = lambda x,y: np.sum(( x - y )**2, axis=-1)
     elif mode == "mse":
-        return np.sum(( x - y )**2, axis=-1 ) / x.__len__()
+        fx = lambda x,y: np.sum(( x - y )**2, axis=-1 ) / x.__len__()
     elif mode == "mae":
-        return np.sum( np.abs(x - y), axis=-1 ) / x.__len__()
+        fx = lambda x,y: np.sum( np.abs(x - y), axis=-1 ) / x.__len__()
     elif mode == "rmse":
-        return np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
+        fx = lambda x,y: np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
     elif mode == "cross-entropy": ## classification
-        return - ( np.sum( x*np.log(y) + (1-x) * np.log(1-y) ) )
+        fx = lambda x,y: - ( np.sum( x*np.log(y) + (1-x) * np.log(1-y) ) )
     else:
         print('Unknown loss function. L2 is used')
-        return np.sum(( x - y )**2, axis=-1 )
+        fx = lambda x,y: np.sum(( x - y )**2, axis=-1 )
+    if derivate:
+        return elementwise_grad(fx)(x,y)
+    return fx(x,y)
         
 class Layer(abc.ABC):
     '''
@@ -682,7 +686,7 @@ class NeuralNetwork(abc.ABC):
         derivate = get_activation_function(derivate = True)(layer_inputs[-1])
         ## calculate loss
         loss = loss_function(y_train, y_pred, loss_func)
-        loss_grad = (y_train - y_pred) * derivate
+        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
         ## make backpropagation backwards through the network
         for layer_index in range(len(self.network))[::-1]:
             layer = self.network[layer_index]
