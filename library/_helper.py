@@ -1,5 +1,6 @@
 import numpy as np
 import abc
+from .metrics import classifier_score, regressor_score
 
 '''
 containing abstract classes as support for the other algorithms - for example implementing the score() function for all classifiers and regressors
@@ -46,31 +47,6 @@ class _classifier(abc.ABC):
         ## make sure X_test is numpy.array
         X_test = np.array(X_test)
         return X_test
-        
-    def calc_rates(self, y_test:np.array, y_pred:np.array) -> list:
-        '''
-        calculates the true positives, the false positives, the true negatives and the false negatives each class
-        Parameters:
-            - y_test: actual y-values - ground truth [numpy.array]
-            - y_pred: predicted y-values - prediction [numpy.array]
-        Returns:
-            - rates: List, each element containing the true positive, the false positive, the true negative and the false negative rate of respective class [List]
-        '''
-        rates = []
-        sum_samples = y_test.__len__()
-        classes = np.unique(y_test)
-        for _class in classes:
-            _pt = np.where(y_test == _class)
-            _nt = np.where(y_test != _class)
-            _pp = np.where(y_pred == _class)
-            _np = np.where(y_pred != _class)
-
-            tp = np.sum([_pt_ in _pp[0] for _pt_ in _pt[0]])
-            fp = np.sum([_pt_ not in _pp[0] for _pt_ in _pt[0]])
-            tn = np.sum([_nt_ in _np[0] for _nt_ in _nt[0]])
-            fn = np.sum([_nt_ not in _np[0] for _nt_ in _nt[0]])
-            rates.append((tp, fp, tn, fn))
-        return rates
     
     @abc.abstractmethod
     def score(self, y_test:np.array, y_pred:np.array, mode:str = "accuracy", average:bool = True) -> float:
@@ -89,28 +65,7 @@ class _classifier(abc.ABC):
         Returns:
             - score: calculated score [Float]
         '''
-        ## make sure to have as many predicted data points as actual ones
-        assert(y_test.__len__() == y_pred.__len__()), "y_test and y_pred must have same length"
-        ## make sure y_test and y_pred are actually numpy.arrays
-        y_test = np.array(y_test)
-        y_pred = np.array(y_pred)
-        rates = self.calc_rates(y_test, y_pred)
-        if mode == "recall":
-            metric = [tp / (tp + fn) for (tp, fp, tn, fn) in rates]
-        elif mode == "precision":
-            metric = [tp / (tp + fp) for (tp, fp, tn, fn) in rates]
-        elif mode == "accuracy":
-            metric = [(tp + tn) / (tp + tn + fp + fn) for (tp, fp, tn, fn) in rates]
-        elif mode == "f1":
-            metric = [2*tp / (2*tp + fp + fn) for (tp, fp, tn, fn) in rates]
-        elif mode == "balanced_accuracy":
-            metric = [(tp / (2*(tp + fn))) + (tn / (2*(tn + fp))) for (tp, fp, tn, fn) in rates]
-        else:
-            print('Unknown score function. Accuracy is used')    
-            metric = [(tp + tn) / (tp + tn + fp + fn) for (tp, fp, tn, fn) in rates]
-        if average:
-            metric = np.sum(metric) / metric.__len__()
-        return metric
+        return classifier_score(y_test, y_pred, mode)
     
 class _regressor(abc.ABC):
     '''
@@ -170,21 +125,4 @@ class _regressor(abc.ABC):
         Returns:
             - score: calculated score [Float]
         '''
-        ## make sure to have as many predicted data points as actual ones
-        assert(y_test.__len__() == y_pred.__len__()), "y_test and y_pred must have same length"
-        ## make sure y_test and y_pred are actually numpy.arrays
-        y_test = np.array(y_test)
-        y_pred = np.array(y_pred)
-        if mode == "l1":
-            return np.sum( np.abs(y_test - y_pred) )
-        elif mode == "l2":
-            return np.sum(( y_test - y_pred )**2 )
-        elif mode == "mse":
-            return np.sum(( y_test - y_pred )**2 ) / y_test.__len__()
-        elif mode == "mae":
-            return np.sum( np.abs(y_test - y_pred) ) / y_test.__len__()
-        elif mode == "rmse":
-            return np.sqrt(np.sum(( y_test - y_pred )**2 ) / y_test.__len__())
-        else:
-            print('Unknown score function. L2 is used')
-            return np.sum(( y_test - y_pred )**2 )
+        return regressor_score(y_test, y_pred, mode)
