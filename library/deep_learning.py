@@ -3,84 +3,47 @@ implements Deep Learning using Neural Networks
 '''
 
 ## Imports
-from autograd import elementwise_grad
-import autograd.numpy as np
+import numpy as np
 from tqdm.notebook import tqdm
 import plotly.offline as py
 import plotly.graph_objs as go
 from .preprocessing import train_test_split
-import abc
+import abc,time
+from .metrics import get_activation_function, loss_function, classifier_score
+import matplotlib.pyplot as plt
+from IPython.display import clear_output
 
-def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> object:
+def plot_progress(metrics:list, params:list, verbose) -> None:
     '''
-    returns corresponding activation function for given mode
+    plots current loss curves and prints progress
     Parameters:
-        - mode: mode of the activation function. Possible values are [String]
-            - Sigmoid-function --> "sigmoid"
-            - Tangens hyperbolicus --> "tanh"
-            - Rectified Linear Unit --> "relu"
-            - Leaky Rectified Linear Unit --> "leaky-relu"
-        - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
+        - metrics: metrics to print and plot [List]
+        - params: further parameters to use (current epoch and number of epochs) [List]
+        - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+            - 0 -> no information (default)
+            - 1 -> more detailed information
     Returns:
-        - y: desired activation function [object]
+        - None
     '''
-    if mode == "sigmoid":
-        y = lambda x: 1 / ( 1 + np.exp(-x) )
-    elif mode == "tanh":
-        y = lambda x: ( np.exp(x) - np.exp(-x) ) / ( np.exp(x) + np.exp(-x) )
-    elif mode == "relu":
-        y = lambda x: np.where(x <= 0, 0.0, 1.0) * x
-    elif mode == "leaky-relu":
-        y = lambda x: np.where(x <= 0, 0.1, 1.0) * x
-    elif mode == "softmax":
-        y = lambda x: np.exp(x-x.max()) / ( (np.exp(x-x.max()) / np.sum(np.exp(x-x.max()))) )
-    else:
-        print('Unknown activation function. linear is used')
-        y = lambda x: x
-    ## when derivation of function shall be returned
-    if derivate:
-        return elementwise_grad(y)
-    return  y
-
-def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False) -> float:
-    '''
-    returns current loss for given x and trained weights and biases
-    Parameters:
-        - x: x values to process [numpy.array]
-        - y: y values that are wanted - "ground truth" [numpy.array]
-        - mode: mode of the loss function. Possible values are [String]
-            - L1-norm Loss --> "l1"
-            - L2-norm Loss --> "l2" = default
-            - Mean squared Error --> "mse"
-            - Mean absolute Error --> "mae"
-            - Root mean squared Error --> "rmse"
-            - Cross Entropy (for classification) --> "cross-entropy"
-            - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy"
-        - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
-    Returns:
-        - loss: calculated loss [Float]
-    '''
-    if mode == "l1":
-        fx = lambda x,y: np.sum( np.abs(x - y), axis=-1)
-    elif mode == "l2":
-        fx = lambda x,y: np.sum(( x - y )**2, axis=-1)
-    elif mode == "mse":
-        fx = lambda x,y: np.sum(( x - y )**2, axis=-1 ) / x.__len__()
-    elif mode == "mae":
-        fx = lambda x,y: np.sum( np.abs(x - y), axis=-1 ) / x.__len__()
-    elif mode == "rmse":
-        fx = lambda x,y: np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
-    elif mode == "cross-entropy": ## classification
-        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7)) + (1-x) * np.log(np.clip(1-y, 1e-7, 1-1e-7))) / x.__len__()
-    elif mode == "categorical-cross-entropy": ## multi-class classifaction
-        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
-    else:
-        print('Unknown loss function. L2 is used')
-        fx = lambda x,y: np.sum(( x - y )**2, axis=-1 )
-    if derivate:
-        return elementwise_grad(fx)(x,y)
-    return fx(x,y)
-        
+    (train_loss, train_metrics, test_loss, test_metrics) = metrics
+    (e, epochs, score, starttime, currenttime) = params
+    epochtime = time.time() - currenttime
+    clear_output(wait = True)
+    length = 80
+    progress = ((e+1) * length - 1) / epochs
+    print(f'Epoch {e+1}/{epochs}')
+    print(f"{'=' * int(progress)}>{'.'*int(length-progress)}")
+    print(f'Train-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}')
+    print(f'Estimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it')
+    if verbose > 0:
+        fig = plt.figure(figsize=(10,5))
+        ax = fig.add_subplot()
+        x = [i for i in range(train_loss.__len__())]
+        ax.plot(x,train_loss, label="train-loss")
+        ax.plot(x,test_loss, label="validation-loss")
+        plt.legend()
+        plt.show()
+    
 class Layer(abc.ABC):
     '''
     abstract class for each kind of different layer. Each layer must be able to do two things
@@ -239,6 +202,8 @@ class Dense(Layer):
             - dense_forward: output of shape (batch_size, output_layer_len) [numpy.array]
             - ac_forward: output after activation function (batch_size, output_layer_len) [numpy.array]
         '''
+        ## make sure input is of type float
+        input = input.astype(float)
         ## if weights are not properly initiated yet
         if self.weights.__len__() == 0:
             _, input_units = input.shape
@@ -256,6 +221,8 @@ class Dense(Layer):
         Returns:
             - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
         '''
+        ## make sure input is of type float
+        input = input.astype(float)
         ## get derivates of activation function
         derivates = self.baf(input)
         grad_input = np.dot(grad_output, self.weights.T) * derivates
@@ -322,6 +289,8 @@ class Convolution(Layer):
             - conv_forward: output of shape (batch_size, x_dim, y_dim, z_dim) [numpy.array]
             - ac_forward: output after activation function (batch_size, x_dim, y_dim, z_dim) [numpy.array]
         '''
+        ## make sure input is of type float
+        input = input.astype(float)
         if self.weights.__len__() == 0:
             self.num_filt, self.filt_x, self.filt_y, self.filt_z = self.filters, *self.kernel_size, input.shape[-1]
             self.weights = np.random.normal(loc = 0, scale = 2/np.sqrt(np.prod((self.num_filt, self.filt_x, self.filt_y, self.filt_z))), size = (self.num_filt, self.filt_x, self.filt_y, self.filt_z))
@@ -355,6 +324,8 @@ class Convolution(Layer):
         Returns:
             - grad_input: output of shape (batch_size, output_layer_len) [numpy.array]
         '''
+        ## make sure input is of type float
+        input = input.astype(float)
         ## get image dimensions
         batch_size, imag_x, imag_y, imag_z = input.shape
         ## init output
@@ -678,7 +649,7 @@ class NeuralNetwork(abc.ABC):
         pass
     
     @abc.abstractmethod       
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "", verbose:int = 0) -> None:
         '''
         Force all neural networks to have a train() function
         performs the training of the network for all steps (= epochs)
@@ -694,9 +665,30 @@ class NeuralNetwork(abc.ABC):
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
                 - Cross Entropy (for classification) --> "cross-entropy"
+            - score: mode of the scoring function. Possible values are [String, default = ""]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2"
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+                - Recall --> "recall"
+                - Precision --> "precision"
+                - Accuracy --> "accuracy"
+                - F1 --> "f1"
+                - balanced Accuracy --> "balanced_accuracy"
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
         Returns:
             - None
         '''
+        ## evaluate which score metric to use
+        if self.__name__() == "RegressorNetwork":
+            score_func = loss_function
+        elif self.__name__() == "ClassifierNetwork":
+            score_func = classifier_score
+        else:
+            raise Exception("NeuralNetwork type does not exist (yet)!")
         if "Convolution" in [n.__name__() for n in self.network]:
             ## Convolution layer does scaling of data, so you don't need to check this
             pass
@@ -706,28 +698,31 @@ class NeuralNetwork(abc.ABC):
                 self.check_scaled_data(y)
             elif self.__name__() == "ClassifierNetwork": ## then scale x values
                 self.check_scaled_data(x)
-            else:
-                raise Exception("NeuralNetwork type does not exist (yet)!")
         ## split datasets
         X_train, X_test, y_train, y_test = train_test_split(x, y)
-        ## init test loss
-        test_loss = np.infty
+        ## init train and test loss
+        train_loss, test_loss, train_metrics, test_metrics = [], [], [], []  
         ## init the bar to show the progress
-        pbar = tqdm(total = epochs)
+        starttime = time.time()
         for e in range(epochs): 
+            ## get current time
+            epochtime = time.time()
             ## go through batches
             for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
                 loss = self.train_step(x_batch, y_batch, loss_func)
-            ## predict x test
+            ## predict x train and x test
             train_pred = self.predict_step(X_train)
             test_pred = self.predict_step(X_test)
-            ## update the loss
-            train_loss = loss_function(train_pred, y_train, loss_func)
-            test_loss = loss_function(test_pred, y_test, loss_func)
+            ## update the loss and metric
+            train_loss.append(np.mean(loss_function(train_pred, y_train, loss_func)))
+            test_loss.append(np.mean(loss_function(test_pred, y_test, loss_func)))
+            train_metrics.append(np.mean(score_func(train_pred, y_train, score)))
+            test_metrics.append(np.mean(score_func(test_pred, y_test, score)))
             ## update progress of training
-            pbar.set_description(f'Epoch: {e}; Train-Loss: {np.mean(train_loss)}; Test-Loss: {np.mean(test_loss)}')
-            pbar.update(1)
-    
+            metrics = [train_loss, train_metrics, test_loss, test_metrics]
+            params = [e, epochs, score, starttime, epochtime]
+            plot_progress(metrics, params, verbose)          
+
     @abc.abstractmethod       
     def predict_step(self, X_test:np.array) -> np.array:
         '''
@@ -858,7 +853,7 @@ class RegressorNetwork(NeuralNetwork):
                 excerpt = slice(start_idx, start_idx + batch_size)
             yield x[excerpt], y[excerpt]
     
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "l2", verbose:int = 0) -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -873,10 +868,19 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
                 - Cross Entropy (for classification) --> "cross-entropy"
+            - score: mode of the scoring function. Possible values are [String]
+                - L1-norm Loss --> "l1"
+                - L2-norm Loss --> "l2" = default
+                - Mean squared Error --> "mse"
+                - Mean absolute Error --> "mae"
+                - Root mean squared Error --> "rmse"
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
         Returns:
             - None
         '''
-        super().train(x, y, batch_size, epochs, loss_func)
+        super().train(x, y, batch_size, epochs, loss_func, score, verbose)
             
     
     def predict_step(self, X_test:np.array) -> np.array:
@@ -991,8 +995,8 @@ class ClassifierNetwork(NeuralNetwork):
         ## get last layer's error
         derivate = get_activation_function("softmax", derivate = True)(layer_inputs[-1])
         ## calculate loss
-        loss = loss_function(y_train, y_pred, loss_func)
-        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
+        loss = loss_function(y_pred, y_train, loss_func)
+        loss_grad = loss_function(y_pred, y_train, loss_func, True) * derivate
         ## make backpropagation backwards through the network
         for layer_index in range(len(self.network))[::-1]:
             layer = self.network[layer_index]
@@ -1023,7 +1027,7 @@ class ClassifierNetwork(NeuralNetwork):
                 excerpt = slice(start_idx, start_idx + batch_size)
             yield x[excerpt], y[excerpt]
     
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2") -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "accuracy", verbose:int = 0) -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -1038,10 +1042,19 @@ class ClassifierNetwork(NeuralNetwork):
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
                 - Cross Entropy (for classification) --> "cross-entropy"
+            - score: mode of the scoring function. Possible values are [String]
+                - Recall --> "recall"
+                - Precision --> "precision"
+                - Accuracy --> "accuracy" = default
+                - F1 --> "f1"
+                - balanced Accuracy --> "balanced_accuracy"
+            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
+                - 0 -> no information (default)
+                - 1 -> more detailed information
         Returns:
             - None
         '''
-        super().train(x, y, batch_size, epochs, loss_func)
+        super().train(x, y, batch_size, epochs, loss_func, score, verbose)
             
     
     def predict_step(self, X_test:np.array) -> np.array:
