@@ -29,21 +29,23 @@ def plot_progress(metrics:list, params:list, verbose) -> None:
     (e, epochs, score, starttime, currenttime) = params
     epochtime = time.time() - currenttime
     clear_output(wait = True)
-    length = 80
-    progress = ((e+1) * length - 1) / epochs
-    print(f'Epoch {e+1}/{epochs}')
-    print(f"{'=' * int(progress)}>{'.'*int(length-progress)}")
-    print(f'Train-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}')
-    print(f'Estimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it')
+    length = 80 if verbose == 0 else 40
+    progress = int(round((e * length - 1) / epochs,0))
     if verbose > 0:
         fig = plt.figure(figsize=(10,5))
         ax = fig.add_subplot()
         x = [i for i in range(train_loss.__len__())]
         ax.plot(x,train_loss, label="train-loss")
         ax.plot(x,test_loss, label="validation-loss")
+        ax.set_title(f'Epoch {e+1}/{epochs}\n{"=" * (progress)}>{"_"*(length-progress)}\nTrain-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}\nEstimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it', loc="left")
         plt.legend()
         plt.show()
-    
+    else:
+        print(f'Epoch {e+1}/{epochs}')
+        print(f'{"=" * progress}>{"."*(length-progress)}')
+        print(f'Train-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}')
+        print(f'Estimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it')
+        
 class Layer(abc.ABC):
     '''
     abstract class for each kind of different layer. Each layer must be able to do two things
