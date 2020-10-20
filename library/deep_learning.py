@@ -411,8 +411,8 @@ class Pooling(Layer):
                         elif self.pooling_mode == "avg":
                             pool_forward[batch, curr_x, curr_y, dim] = np.mean(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
                         else:
-                            print("this pooling mode is not implemented (yet)! Using MaxPool instead!")
-                            pool_forward[batch, curr_x, curr_y, dim] = np.max(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                            print("this pooling mode is not implemented (yet)! Using AvgPool instead!")
+                            pool_forward[batch, curr_x, curr_y, dim] = np.mean(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
                         curr_y += 1
                     curr_x += 1
         ac_forward = pool_forward.copy()
@@ -438,11 +438,17 @@ class Pooling(Layer):
                 while curr_x + self.x <= imag_x:
                     curr_y, out_y = 0, 0
                     while curr_y + self.y <= imag_y:
-                        ## obtain index of largest value in input for current window
-                        idx = np.nanargmax(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
-                        (x, y) = np.unravel_index(idx, input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y].shape)
-                        ## set value to output
-                        grad_input[batch, dim, out_x+x, out_y+y] = grad_output[batch, curr_x, curr_y, dim]
+                        if self.pooling_mode == "max":
+                            ## obtain index of largest value in input for current window
+                            idx = np.nanargmax(input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y])
+                            (x, y) = np.unravel_index(idx, input[batch, dim, curr_x:curr_x+self.x, curr_y:curr_y+self.y].shape)
+                            ## set value to output
+                            grad_input[batch, dim, out_x+x, out_y+y] = grad_output[batch, curr_x, curr_y, dim]
+                        elif self.pooling_mode == "avg":
+                            grad_input[batch, dim, out_x:out_x+self.x, out_y:out_y+self.x] = grad_output[batch, curr_x, curr_y, dim] * (1 / (self.x * self.y))
+                        else:
+                            print("this pooling mode is not implemented (yet)! Using AvgPool instead!")
+                        
                         curr_y += self.y
                         out_y += 1
                     curr_x += self.x
@@ -820,7 +826,7 @@ class RegressorNetwork(NeuralNetwork):
                 - Root mean squared Error --> "rmse"
             - score: mode of the scoring function. Possible values are [String]
                 - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2" = default
+                - L2-norm Loss --> "l2", (default)
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
@@ -990,7 +996,7 @@ class ClassifierNetwork(NeuralNetwork):
                 excerpt = slice(start_idx, start_idx + batch_size)
             yield x[excerpt], y[excerpt]
     
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "accuracy", verbose:int = 0) -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "categorical-cross-entropy", score:str = "accuracy", verbose:int = 0) -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -999,12 +1005,10 @@ class ClassifierNetwork(NeuralNetwork):
             - batch_size: size of every batch [Integer, default = 10]
             - epochs: number of epochs to perform the training on [Integer, default = 100]
             - loss_func: mode of the loss function. Possible values are [String]
-                - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2", (default)
-                - Mean squared Error --> "mse"
-                - Mean absolute Error --> "mae"
-                - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
+                - Hinge (for binary classification) --> "hinge"
+                - Squared Hinge (for binary classification) --> "squared-hinge"
+                - Cross Entropy (for binary classification) --> "cross-entropy"
+                - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy", (default)
             - score: mode of the scoring function. Possible values are [String]
                 - Recall --> "recall"
                 - Precision --> "precision"
