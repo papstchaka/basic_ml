@@ -54,9 +54,7 @@ Algorithms with different work-wise:
 ## What's next:
 
 >   - working on the Deep Learning module:
->       - adding more loss functions
 >       - adding callbacks (EarlyStopping, Learning Rate Schedules - dynamic learning rate)
->       - Average Pooling backpropagation
 >   - go through all the algorithms and add further variety
 
 ## Supporting developers:
