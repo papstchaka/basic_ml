@@ -37,35 +37,44 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
         return elementwise_grad(y)
     return  y
 
-def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False) -> float:
+def loss_function(y_test:np.array, y_pred:np.array, mode:str = "l2", derivate:bool = False) -> float:
     '''
     returns current loss for given x and trained weights and biases
     Parameters:
-        - x: x values to process [numpy.array]
-        - y: y values that are wanted - "ground truth" [numpy.array]
+        - y_test: actual values - ground truth [numpy.array]
+        - y_pred: predicted values [numpy.array]
         - mode: mode of the loss function. Possible values are [String]
-            - L1-norm Loss --> "l1"
-            - L2-norm Loss --> "l2" = default
-            - Mean squared Error --> "mse"
-            - Mean absolute Error --> "mae"
-            - Root mean squared Error --> "rmse"
-            - Cross Entropy (for classification) --> "cross-entropy"
+            - L1-norm Error (for Regression) --> "l1"
+            - L2-norm Error (for Regression) --> "l2" = default
+            - Mean squared Error (for Regression) --> "mse"
+            - Mean absolute Error (for Regression) --> "mae"
+            - Root mean squared Error (for Regression) --> "rmse"
+            - Mean squared logarithmic Error (for Regression) --> "mlse" 
+            - Hinge (for binary classification) --> "hinge"
+            - Squared Hinge (for binary classification) --> "squared-hinge"
+            - Cross Entropy (for binary classification) --> "cross-entropy"
             - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy"
         - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
     Returns:
         - loss: calculated loss [Float]
     '''
-    if mode == "l1":
+    if mode == "l1": ## regression
         fx = lambda x,y: np.sum( np.abs(x - y), axis=-1)
-    elif mode == "l2":
+    elif mode == "l2": ## regression
         fx = lambda x,y: np.sum(( x - y )**2, axis=-1)
-    elif mode == "mse":
+    elif mode == "mse": ## regression
         fx = lambda x,y: np.sum(( x - y )**2, axis=-1 ) / x.__len__()
-    elif mode == "mae":
+    elif mode == "mae": ## regression
         fx = lambda x,y: np.sum( np.abs(x - y), axis=-1 ) / x.__len__()
-    elif mode == "rmse":
+    elif mode == "rmse": ## regression
         fx = lambda x,y: np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
-    elif mode == "cross-entropy": ## classification
+    elif mode == "msle": ## regression
+        fx = lambda x,y: np.sum( (np.log(x+1) - np.log(y+1))**2 , axis=-1) / x.__len__()
+    elif mode == "hinge": ## binary classification
+        fx = lambda x,y: np.sum(np.where((1 - x*y) <= 0, 0.0, 1.0) * (1 - x*y)) / x.__len__()
+    elif mode == "squared-hinge": ## binary classification
+        fx = lambda x,y: np.sum((np.where((1 - x*y) <= 0, 0.0, 1.0) * (1 - x*y) )**2) / x.__len__()
+    elif mode == "cross-entropy": ## binary classification
         fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7)) + (1-x) * np.log(np.clip(1-y, 1e-7, 1-1e-7))) / x.__len__()
     elif mode == "categorical-cross-entropy": ## multi-class classifaction
         fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
@@ -73,8 +82,8 @@ def loss_function(x:np.array, y:np.array, mode:str = "l2", derivate:bool = False
         print('Unknown loss function. L2 is used')
         fx = lambda x,y: np.sum(( x - y )**2, axis=-1 )
     if derivate:
-        return elementwise_grad(fx)(x,y)
-    return fx(x,y)
+        return - elementwise_grad(fx)(y_test,y_pred)
+    return fx(y_test,y_pred)
 
 def calc_rates(y_test:np.array, y_pred:np.array) -> list:
     '''
