@@ -8,9 +8,10 @@ Only used libraries are:
 >   - <a href="https://plotly.com/" target="_blank">`plotly`</a>
 >   - <a href="https://github.com/tqdm/tqdm" target="_blank">`tqdm`</a> - for showing progress of training
 >   - <a href="https://github.com/HIPS/autograd" target="_blank">`autograd`</a> - for derivation of functions
+>   - <a href="https://jupyterlab.readthedocs.io/en/stable/" target="_blank">`jupyterlab`</a> (as development environment and to call all other scripts)
 
 which can be installed via
->       `pip install numpy scipy plotly tqdm autograd`
+>       `pip install numpy scipy plotly tqdm autograd jupyterlab`
 
 ## Scripts:
 The implemented algorithms are splitted into three parts, given by the three different scripts in `library`:
@@ -19,7 +20,8 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - <a href="library/deep_learning.py" target="_blank">`deep_learning.py`</a> contains Deep Learning using Neural Networks
 >   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
 >   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
->   - <a href="library/preprocessing.py" target="_blank">`preprocessing.py`</a> containing classes for data preprocessing
+>   - <a href="library/preprocessing.py" target="_blank">`preprocessing.py`</a> containing classes and functions for data preprocessing (MinMaxScaler, train_test_split)
+>   - <a href="library/metrics.py" target="_blank">`metrics.py`</a> containing several loss-/activation-functions (for deep_learning) and the metrics for `score()`-evaluation
 
 ## Functionalities that are already implemented (state of 12.10.2020):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
@@ -29,7 +31,7 @@ The implemented algorithms are splitted into three parts, given by the three dif
 >   - Gaussian Processes Regression <a href="https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html" target="_blank">`GP by sklearn`</a>
 >   - Reinforcement Learning <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
 >   - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
->   - Deep Learning using Neural Networks <a href="https://www.tensorflow.org/tutorials/keras/classification" target="_blank">`Deep Learning by Tensorflow`</a>
+>   - Deep Learning using Neural Networks [containing Convolution-, Pooling-, Dense-, Flatten-, Dropout- and ReLU-Layer] <a href="https://www.tensorflow.org/tutorials/keras/classification" target="_blank">`Deep Learning by Tensorflow`</a>
 >   - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
 >   - Data Preprocessing for DataSet manipulation (containing a MinMaxScaler and a train_test_split()-function) <a href=https://scikit-learn.org/stable/modules/preprocessing.html target="_blank">`Preprocessing by sklearn`</a>
 
@@ -42,7 +44,7 @@ Algorithms that work exactly as describe above, respectively in their sklearn do
 >   - Dimension Reduction - `train()`, `predict()` and `score()` function are `fit()`, `fit_transform()` and `transform()` respectively
 >   - Gaussian Mixture Models with Expectation Maximization Algorithm -> Classifier
 >   - Gaussian Processes -> Regressor
->   - Deep Learning using Neural Networks - has its one `score()` function as being the `loss()` function in training
+>   - Deep Learning using Neural Networks - has its one `score()` function as being the `loss()` function in training. Workwise/Usage in the same way as <a href=https://www.tensorflow.org/ target="_blank">`Tensorflow Implementation`</a> 
 
 Algorithms with different work-wise:
 >   - Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train()` function implemented, since the user is obliged to self-decide whether or not to use `Q-Learning` or `Action-Value-Iteration`.
@@ -51,7 +53,10 @@ Algorithms with different work-wise:
 
 ## What's next:
 
->   - working on the Deep Learning module
+>   - working on the Deep Learning module:
+>       - adding more loss functions
+>       - adding callbacks (EarlyStopping, Learning Rate Schedules - dynamic learning rate)
+>       - Average Pooling backpropagation
 >   - go through all the algorithms and add further variety
 
 ## Supporting developers:
