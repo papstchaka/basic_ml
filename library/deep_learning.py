@@ -235,8 +235,8 @@ class Dense(Layer):
         assert grad_weights.shape == self.weights.shape, "gradient of weights must match dimensionality of weights"
         assert grad_biases.shape == self.biases.shape, "gradient of biases must match dimensionality of biases"
         ## Update weights and biases
-        self.weights = self.weights + self.lr * grad_weights
-        self.biases = self.biases + self.lr * grad_biases
+        self.weights = self.weights - self.lr * grad_weights
+        self.biases = self.biases - self.lr * grad_biases
         return grad_input
     
 class Convolution(Layer):
@@ -352,8 +352,8 @@ class Convolution(Layer):
             ## loss gradient of bias
             grad_biases[curr_f] = np.sum(grad_output[:, curr_f])
         ## Update weights and biases
-        self.weights = self.weights + self.lr * grad_filters
-        self.biases = self.biases + self.lr * grad_biases
+        self.weights = self.weights - self.lr * grad_filters
+        self.biases = self.biases - self.lr * grad_biases
         return grad_input*derivates
     
 class Pooling(Layer):
@@ -639,91 +639,56 @@ class NeuralNetwork(abc.ABC):
         return forwards, activations
     
     @abc.abstractmethod    
-    def train_step(self) -> None:
+    def train_step(self, X_train:np.array, y_train:np.array, loss_func:str) -> float:
         '''
         Force all neural networks to have a train_step() function
         performs networks training on given batches. Does nothing
         Parameters:
-            - None
+            - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
+            - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
+            - loss_func: mode of the loss function. Possible values are [String]
+                - L1-norm Error (Regression) --> "l1"
+                - L2-norm Error (Regression) --> "l2", (default)
+                - Mean squared Error (Regression) --> "mse"
+                - Mean absolute Error (Regression) --> "mae"
+                - Root mean squared Error (Regression) --> "rmse"
+                - Mean squared logarithmic Error (Regression) --> "mlse" 
+                - Hinge (binary Classification) --> "hinge"
+                - Squared Hinge (binary Classification) --> "squared-hinge"
+                - Cross Entropy (binary Classification) --> "cross-entropy"
+                - Categorical Cross Entropy (Multi-class Classification) --> "categorical-cross-entropy"
         Returns:
-            - None
+            - train_loss: trainings loss for current batch [Float]
         '''
-        pass
+        ## get layer activations
+        layer_forwards, layer_activations = self.forward(X_train, True)
+        ## layer[i] is the input for network[i]
+        layer_inputs = [X_train] + layer_forwards
+        ## prediction for this batch
+        y_pred = layer_activations[-1]
+        ## get last layer's error
+        derivate = get_activation_function("sigmoid", True)(layer_inputs[-1])
+        ## calculate loss
+        loss = loss_function(y_train, y_pred, loss_func)
+        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
+        ## make backpropagation backwards through the network
+        for layer_index in range(len(self.network))[::-1]:
+            layer = self.network[layer_index]
+            ## update loss_grad, also updates the weights and biases
+            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
+        return loss
     
     @abc.abstractmethod       
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "", verbose:int = 0) -> None:
+    def train(self) -> None:
         '''
         Force all neural networks to have a train() function
-        performs the training of the network for all steps (= epochs)
+        performs the training of the network for all steps (= epochs). Does nothing
         Parameters:
-            - x: x-values to train the network on [numpy.array]
-            - y: y-values for loss calculation (= ground truth) [numpy.array]
-            - batch_size: size of every batch [Integer, default = 10]
-            - epochs: number of epochs to perform the training on [Integer, default = 100]
-            - loss_func: mode of the loss function. Possible values are [String]
-                - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2", (default)
-                - Mean squared Error --> "mse"
-                - Mean absolute Error --> "mae"
-                - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
-            - score: mode of the scoring function. Possible values are [String, default = ""]
-                - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2"
-                - Mean squared Error --> "mse"
-                - Mean absolute Error --> "mae"
-                - Root mean squared Error --> "rmse"
-                - Recall --> "recall"
-                - Precision --> "precision"
-                - Accuracy --> "accuracy"
-                - F1 --> "f1"
-                - balanced Accuracy --> "balanced_accuracy"
-            - verbose: how detailed the train process shall be documented. Possible values are [Integer]
-                - 0 -> no information (default)
-                - 1 -> more detailed information
+            - None
         Returns:
             - None
         '''
-        ## evaluate which score metric to use
-        if self.__name__() == "RegressorNetwork":
-            score_func = loss_function
-        elif self.__name__() == "ClassifierNetwork":
-            score_func = classifier_score
-        else:
-            raise Exception("NeuralNetwork type does not exist (yet)!")
-        if "Convolution" in [n.__name__() for n in self.network]:
-            ## Convolution layer does scaling of data, so you don't need to check this
-            pass
-        else:
-            ## check whether data is scaled into range(0,1)
-            if self.__name__() == "RegressorNetwork": ## then scale y values
-                self.check_scaled_data(y)
-            elif self.__name__() == "ClassifierNetwork": ## then scale x values
-                self.check_scaled_data(x)
-        ## split datasets
-        X_train, X_test, y_train, y_test = train_test_split(x, y)
-        ## init train and test loss
-        train_loss, test_loss, train_metrics, test_metrics = [], [], [], []  
-        ## init the bar to show the progress
-        starttime = time.time()
-        for e in range(epochs): 
-            ## get current time
-            epochtime = time.time()
-            ## go through batches
-            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
-                loss = self.train_step(x_batch, y_batch, loss_func)
-            ## predict x train and x test
-            train_pred = self.predict_step(X_train)
-            test_pred = self.predict_step(X_test)
-            ## update the loss and metric
-            train_loss.append(np.mean(loss_function(train_pred, y_train, loss_func)))
-            test_loss.append(np.mean(loss_function(test_pred, y_test, loss_func)))
-            train_metrics.append(np.mean(score_func(train_pred, y_train, score)))
-            test_metrics.append(np.mean(score_func(test_pred, y_test, score)))
-            ## update progress of training
-            metrics = [train_loss, train_metrics, test_loss, test_metrics]
-            params = [e, epochs, score, starttime, epochtime]
-            plot_progress(metrics, params, verbose)          
+        pass   
 
     @abc.abstractmethod       
     def predict_step(self, X_test:np.array) -> np.array:
@@ -810,27 +775,11 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
+                - Mean squared logarithmic Error --> "mlse" 
         Returns:
             - train_loss: trainings loss for current batch [Float]
         '''
-        ## get layer activations
-        layer_forwards, layer_activations = self.forward(X_train, True)
-        ## layer[i] is the input for network[i]
-        layer_inputs = [X_train] + layer_forwards
-        ## prediction for this batch
-        y_pred = layer_activations[-1]
-        ## get last layer's error
-        derivate = get_activation_function("sigmoid", True)(layer_inputs[-1])
-        ## calculate loss
-        loss = loss_function(y_train, y_pred, loss_func)
-        loss_grad = loss_function(y_train, y_pred, loss_func, True) * derivate
-        ## make backpropagation backwards through the network
-        for layer_index in range(len(self.network))[::-1]:
-            layer = self.network[layer_index]
-            ## update loss_grad, also updates the weights and biases
-            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
-        return loss
+        return super().train_step(X_train, y_train, loss_func)
         
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
@@ -869,7 +818,6 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
             - score: mode of the scoring function. Possible values are [String]
                 - L1-norm Loss --> "l1"
                 - L2-norm Loss --> "l2" = default
@@ -882,7 +830,39 @@ class RegressorNetwork(NeuralNetwork):
         Returns:
             - None
         '''
-        super().train(x, y, batch_size, epochs, loss_func, score, verbose)
+        ## make sure x any y are floats
+        x = x.astype(float)
+        y = y.astype(float)
+        if "Convolution" in [n.__name__() for n in self.network]:
+            ## Convolution layer does scaling of data, so you don't need to check this
+            pass
+        else:
+            ## check whether data is scaled into range(0,1)
+            self.check_scaled_data(y)
+        ## split datasets
+        X_train, X_test, y_train, y_test = train_test_split(x, y)
+        ## init train and test loss
+        train_loss, test_loss, train_metrics, test_metrics = [], [], [], []  
+        ## init the bar to show the progress
+        starttime = time.time()
+        for e in range(epochs): 
+            ## get current time
+            epochtime = time.time()
+            ## go through batches
+            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
+                loss = self.train_step(x_batch, y_batch, loss_func)
+            ## predict x train and x test
+            train_pred = self.predict_step(X_train)
+            test_pred = self.predict_step(X_test)
+            ## update the loss and metric
+            train_loss.append(np.mean(loss_function(y_train, train_pred, loss_func)))
+            test_loss.append(np.mean(loss_function(y_test, test_pred, loss_func)))
+            train_metrics.append(np.mean(loss_function(y_train, train_pred, score)))
+            test_metrics.append(np.mean(loss_function(y_test, test_pred, score)))
+            ## update progress of training
+            metrics = [train_loss, train_metrics, test_loss, test_metrics]
+            params = [e, epochs, score, starttime, epochtime]
+            plot_progress(metrics, params, verbose)          
             
     
     def predict_step(self, X_test:np.array) -> np.array:
@@ -978,33 +958,14 @@ class ClassifierNetwork(NeuralNetwork):
             - X_train: X_batch of shape (batch_size, sequence_length) [numpy.array]
             - y_train: corresponding y_batch of shape (batch_size, sequence_length) [numpy.array]
             - loss_func: mode of the loss function. Possible values are [String]
-                - L1-norm Loss --> "l1"
-                - L2-norm Loss --> "l2", (default)
-                - Mean squared Error --> "mse"
-                - Mean absolute Error --> "mae"
-                - Root mean squared Error --> "rmse"
-                - Cross Entropy (for classification) --> "cross-entropy"
+                - Hinge --> "hinge"
+                - Squared Hinge --> "squared-hinge"
+                - Cross Entropy --> "cross-entropy"
+                - Categorical Cross Entropy --> "categorical-cross-entropy"
         Returns:
             - train_loss: trainings loss for current batch [Float]
         '''
-        ## get layer activations
-        layer_forwards, layer_activations = self.forward(X_train, True)
-        ## layer[i] is the input for network[i]
-        layer_inputs = [X_train] + layer_forwards
-        ## prediction for this batch
-        y_pred = np.argmax(layer_activations[-1],axis=-1).reshape(-1,1)
-        # y_pred = layer_activations[-1]
-        ## get last layer's error
-        derivate = get_activation_function("softmax", derivate = True)(layer_inputs[-1])
-        ## calculate loss
-        loss = loss_function(y_pred, y_train, loss_func)
-        loss_grad = loss_function(y_pred, y_train, loss_func, True) * derivate
-        ## make backpropagation backwards through the network
-        for layer_index in range(len(self.network))[::-1]:
-            layer = self.network[layer_index]
-            ## update loss_grad, also updates the weights and biases
-            loss_grad = layer.backward(layer_inputs[layer_index], loss_grad)
-        return loss
+        return super().train_step(X_train, y_train, loss_func)
         
     def iterate_minibatches(self, x:np.array, y:np.array, batch_size:int = 10, shuffle:bool = True) -> tuple:
         '''
@@ -1056,7 +1017,43 @@ class ClassifierNetwork(NeuralNetwork):
         Returns:
             - None
         '''
-        super().train(x, y, batch_size, epochs, loss_func, score, verbose)
+        y_ = np.zeros((y.shape[0],np.unique(y).__len__()))
+        for i in range(y.__len__()):
+            y_[i,y[i]] = 1
+        y = y_.copy()
+        ## make sure x any y are floats
+        x = x.astype(float)
+        y = y.astype(float)
+        if "Convolution" in [n.__name__() for n in self.network]:
+            ## Convolution layer does scaling of data, so you don't need to check this
+            pass
+        else:
+            ## check whether data is scaled into range(0,1)
+            self.check_scaled_data(x)
+        ## split datasets
+        X_train, X_test, y_train, y_test = train_test_split(x, y)
+        ## init train and test loss
+        train_loss, test_loss, train_metrics, test_metrics = [], [], [], []  
+        ## init the bar to show the progress
+        starttime = time.time()
+        for e in range(epochs): 
+            ## get current time
+            epochtime = time.time()
+            ## go through batches
+            for x_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size, True):
+                loss = self.train_step(x_batch, y_batch, loss_func)
+            ## predict x train and x test
+            train_pred = self.predict_step(X_train)
+            test_pred = self.predict_step(X_test)
+            ## update the loss and metric
+            train_loss.append(np.mean(loss_function(y_train, train_pred, loss_func)))
+            test_loss.append(np.mean(loss_function(y_test, test_pred, loss_func)))
+            train_metrics.append(np.mean(classifier_score(np.argmax(y_train, axis=-1), np.argmax(train_pred, axis=-1), score)))
+            test_metrics.append(np.mean(classifier_score(np.argmax(y_test, axis=-1), np.argmax(test_pred, axis=-1), score)))
+            ## update progress of training
+            metrics = [train_loss, train_metrics, test_loss, test_metrics]
+            params = [e, epochs, score, starttime, epochtime]
+            plot_progress(metrics, params, verbose)        
             
     
     def predict_step(self, X_test:np.array) -> np.array:
@@ -1069,15 +1066,18 @@ class ClassifierNetwork(NeuralNetwork):
         '''
         return super().predict_step(X_test)
     
-    def predict(self, X_test:np.array, y_test:np.array) -> np.array:
+    def predict(self, X_test:np.array, y_test:np.array) -> tuple:
         '''
         performs the prediction of x using the network
         Parameters:
             - x_test: x-values to predict [numpy.array]
             - y_test: y-values for loss calculation (= ground truth) [numpy.array]
         Returns:
-            - y_pred: predicted y-values [numpy.array]
+            - Tuple containing [Tuple]
+               - label: predicted label [Integer]
+               - proba: probability of label [Float]
         '''
         ## get y_pred
         y_pred = self.predict_step(X_test)
-        return np.argmax(y_pred)
+        label = np.argmax(y_pred)
+        return label, y_pred[0,label]
