@@ -51,7 +51,7 @@ class Layer(abc.ABC):
     abstract class for each kind of different layer. Each layer must be able to do two things
         - forward step -> output = layer.forward(input)
         - backpropagation -> grad_input = layer.backward(input, grad_output)
-    some also learn parameters -> updating them during layer.backward
+    some learn parameters -> updating them during layer.backward
     '''
     
     @abc.abstractmethod
@@ -68,11 +68,15 @@ class Layer(abc.ABC):
         pass
     
     @abc.abstractmethod
-    def __name__(self) -> str:
+    def __name__(self, name:str = "Layer") -> str:
         '''
         forces all layers to have a __name__ to get to know the layers name
+        Parameters:
+            - name: desired name [String, default = "Layer"]
+        Returns:
+            - name: name of layer [String]
         '''
-        return "layer"
+        return name
 
     @abc.abstractmethod
     def forward(self, input:np.array, *args) -> np.array:
@@ -124,8 +128,12 @@ class ReLU(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "ReLu"
+        return super().__name__("ReLU")
     
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -191,8 +199,12 @@ class Dense(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "Dense"
+        return super().__name__("Dense")
     
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -278,8 +290,12 @@ class Convolution(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "Convolution"
+        return super().__name__("Convolution")
     
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -382,8 +398,12 @@ class Pooling(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "Pooling"
+        return super().__name__("Pooling")
 
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -472,8 +492,12 @@ class Flatten(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "Flatten"
+        return super().__name__("Flatten")
     
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -528,8 +552,12 @@ class Dropout(Layer):
     def __name__(self) -> str:
         '''
         sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of layer [String]
         '''
-        return "Dropout"
+        return super().__name__("Dropout")
         
     def forward(self, input:np.array, *args) -> np.array:
         '''
@@ -597,11 +625,15 @@ class NeuralNetwork(abc.ABC):
         self.network = network
 
     @abc.abstractmethod
-    def __name__(self) -> str:
+    def __name__(self, name:str = "NeuralNetwork") -> str:
         '''
         forces all neural networks to have a __name__ to get to know the layers name
+        Parameters:
+            - name: desired name [String, default = "NeuralNetwork"]
+        Returns:
+            - name: name of NeuralNetwork [String]
         '''
-        return "NeuralNetwork"
+        return name
         
     @abc.abstractmethod
     def check_scaled_data(self, data:np.array) -> None:
@@ -743,9 +775,12 @@ class RegressorNetwork(NeuralNetwork):
 
     def __name__(self) -> str:
         '''
-        sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of NeuralNetwork [String]
         '''
-        return "RegressorNetwork"
+        return super().__name__("RegressorNetwork")
         
     def check_scaled_data(self, data:np.array) -> None:
         '''
@@ -933,9 +968,12 @@ class ClassifierNetwork(NeuralNetwork):
 
     def __name__(self) -> str:
         '''
-        sets name of layer
+        Parameters:
+            - None
+        Returns:
+            - name: name of NeuralNetwork [String]
         '''
-        return "ClassifierNetwork"
+        return super().__name__("ClassifierNetwork")
         
     def check_scaled_data(self, data:np.array) -> None:
         '''
