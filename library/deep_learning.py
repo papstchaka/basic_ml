@@ -824,12 +824,14 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
+                - Mean squared logarithmic Error --> "mlse" 
             - score: mode of the scoring function. Possible values are [String]
                 - L1-norm Loss --> "l1"
                 - L2-norm Loss --> "l2", (default)
                 - Mean squared Error --> "mse"
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
+                - Mean squared logarithmic Error --> "mlse" 
             - verbose: how detailed the train process shall be documented. Possible values are [Integer]
                 - 0 -> no information (default)
                 - 1 -> more detailed information
