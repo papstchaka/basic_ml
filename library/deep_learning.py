@@ -8,6 +8,7 @@ from tqdm.notebook import tqdm
 import plotly.offline as py
 import plotly.graph_objs as go
 from .preprocessing import train_test_split
+from ._helper import convertSeconds
 import abc,time
 from .metrics import get_activation_function, loss_function, classifier_score
 import matplotlib.pyplot as plt
@@ -30,21 +31,21 @@ def plot_progress(metrics:list, params:list, verbose) -> None:
     epochtime = time.time() - currenttime
     clear_output(wait = True)
     length = 80 if verbose == 0 else 40
-    progress = int(round((e * length - 1) / epochs,0))
+    progress = int(round((e * length - 1) / epochs, 0))
     if verbose > 0:
         fig = plt.figure(figsize=(10,5))
         ax = fig.add_subplot()
         x = [i for i in range(train_loss.__len__())]
         ax.plot(x,train_loss, label="train-loss")
         ax.plot(x,test_loss, label="validation-loss")
-        ax.set_title(f'Epoch {e+1}/{epochs}\n{"=" * (progress)}>{"_"*int(1.5*(length-progress))}\nTrain-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}\nEstimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it', loc="left")
+        ax.set_title(f'Epoch {e+1}/{epochs}\n{"=" * (progress)}>{"_"*int(1.5*(length-progress))}\nTrain-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}\nEstimated time: {convertSeconds(currenttime-starttime)}<{convertSeconds(epochtime*(epochs-e))}, {(1/epochtime):.2f}it/s', loc="left")
         plt.legend()
         plt.show()
     else:
         print(f'Epoch {e+1}/{epochs}')
         print(f'{"=" * progress}>{"."*(length-progress-1)}')
         print(f'Train-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}')
-        print(f'Estimated time: {(currenttime-starttime):.2f}<{epochtime*(epochs-e):.2f}, {epochtime:.2f}s/it')
+        print(f'Estimated time: {convertSeconds(currenttime-starttime)}<{convertSeconds(epochtime*(epochs-e))}, {(1/epochtime):.2f}it/s')
         
 class Layer(abc.ABC):
     '''

@@ -3,8 +3,26 @@ import abc
 from .metrics import classifier_score, regressor_score
 
 '''
-containing abstract classes as support for the other algorithms - for example implementing the score() function for all classifiers and regressors
+containing abstract classes and functions (that do not belong elsewhere) as support for the other algorithms - for example implementing the score() function for all classifiers and regressors
 '''
+
+def convertSeconds(seconds:float) -> str:
+    '''
+    converts seconds into hours, minutes and seconds
+    Parameters:
+        - seconds: number of seconds [Float/Integer]
+    Returns:
+        - timestamp: in format hh:mm:ss [String]
+    '''
+    hours = int((seconds/3600)%24)
+    seconds -= hours * 3600
+    minutes = int(((seconds-hours*3600)/60)%60)
+    seconds -= minutes * 60
+    seconds = int(seconds)
+    seconds, minutes, hours = str(seconds).rjust(2, '0'), str(minutes).rjust(2, '0'), str(hours).rjust(2, '0')
+    if int(hours) > 0:
+        return f'{hours}:{minutes}:{seconds}'
+    return f'{minutes}:{seconds}'
 
 class _classifier(abc.ABC):
     '''
