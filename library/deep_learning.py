@@ -9,16 +9,16 @@ import plotly.offline as py
 import plotly.graph_objs as go
 from .preprocessing import train_test_split
 from ._helper import convertSeconds
-import abc,time
+import abc, time
 from .metrics import get_activation_function, loss_function, classifier_score
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
-def plot_progress(metrics:list, params:list, verbose) -> None:
+def plot_progress(metrics:dict, params:list, verbose) -> None:
     '''
     plots current loss curves and prints progress
     Parameters:
-        - metrics: metrics to print and plot [List]
+        - metrics: metrics to print and plot [Dictionary]
         - params: further parameters to use (current epoch and number of epochs) [List]
         - verbose: how detailed the train process shall be documented. Possible values are [Integer]
             - 0 -> no information (default)
@@ -26,7 +26,7 @@ def plot_progress(metrics:list, params:list, verbose) -> None:
     Returns:
         - None
     '''
-    (train_loss, train_metrics, test_loss, test_metrics) = metrics
+    (train_loss, train_metrics, test_loss, test_metrics) = metrics.values()
     (e, epochs, score, starttime, currenttime) = params
     epochtime = time.time() - currenttime
     clear_output(wait = True)
@@ -46,7 +46,113 @@ def plot_progress(metrics:list, params:list, verbose) -> None:
         print(f'{"=" * progress}>{"."*(length-progress-1)}')
         print(f'Train-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}')
         print(f'Estimated time: {convertSeconds(currenttime-starttime)}<{convertSeconds(epochtime*(epochs-e))}, {(1/epochtime):.2f}it/s')
+
+class Callback(abc.ABC):
+    '''
+    abstract class for each kind of different callback
+    '''
+    
+    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-4, **kwargs) -> None:
+        '''
+        force all layer to have an __init__ function to handle possible layer parameters
+        Parameters:
+            - function: metric to apply callback to - for example "loss" or "scoring" [String]
+            - validation: whether (=True, default) or not (=False) evaluate callback on validation set (otherwise on training set) [Boolean]
+            - epochs: number of epochs to wait until callback gets activated [Integer, default = 10]
+            - tolerance: tolerance in change providing the callback to be activated [Float, default = 1e-4]
+            - **kwargs: enabling user to provide a dictionary with all needed information, no matter of the order [Dictionary]
+        Initializes:
+            - function
+            - validation to be either train or test [String]
+            - epochs
+            - tolerance
+        Returns:
+            - None
+        '''
+        self.function = function
+        self.validation = "test" if validation else "train"
+        self.epochs = epochs
+        self.tolerance = tolerance
+    
+    @abc.abstractmethod
+    def __name__(self, name:str = "Callback") -> str:
+        '''
+        forces all layers to have a __name__ to get to know the callbacks name
+        Parameters:
+            - name: desired name [String, default = "Callback"]
+        Returns:
+            - name: name of callback [String]
+        '''
+        return name
+    
+    @abc.abstractmethod
+    def evaluate(self) -> None:
+        '''
+        forces all callbacks to have a evaluate() function that checks whether callback should get active. Does nothing
+        Parameters:
+            - None
+        Returns:
+            - None
+        '''
+        pass        
         
+class EarlyStopping(Callback):
+    '''
+    Callback that stops training procedure if model does not perform any (noteworthy) changes in given function
+    '''
+    
+    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-4, **kwargs) -> None:
+        '''
+        constructor of class
+        Parameters:
+            - function: metric to apply callback to - for example "loss" or "scoring" [String]
+            - validation: whether (=True, default) or not (=False) evaluate callback on validation set (otherwise on training set) [Boolean]
+            - epochs: number of epochs to wait until callback gets activated [Integer, default = 10]
+            - tolerance: tolerance in change providing the callback to be activated [Float, default = 1e-4]
+            - **kwargs: enabling user to provide a dictionary with all needed information, no matter of the order [Dictionary]
+        Initializes:
+            - function
+            - validation
+            - epochs
+            - tolerance
+        Returns:
+            - None
+        '''
+        super().__init__(function, validation, epochs, tolerance, **kwargs)
+        
+    def __name__(self) -> str:
+        '''
+        sets name of callback
+        Parameters:
+            - None
+        Returns:
+            - name: name of callback [String]
+        '''
+        return super().__name__("EarlyStopping")
+    
+    def evaluate(self, metrics:dict) -> int:
+        '''
+        checks whether callback should get active
+        Parameters:
+            - metrics: Dictionary with all metrics that are collected during traing (trainloss, trainscore, testloss, testscore) [Dictionary]
+        Returns:
+            - stop: whether (=0) or not (=1) to stop the training [Integer]
+        '''
+        stop = 0
+        possible_metrics = [key.split("_")[1] for key in metrics.keys()]
+        if self.function in possible_metrics:
+            data = metrics[f'{self.validation}_{self.function}']
+        else:
+            print(f"this metric is not available! Using {list(metrics.keys())[0]} instead!")
+            data = metrics[list(metrics.keys())[0]]
+        if data.__len__() >= self.epochs:
+            changes = np.ones((self.epochs))
+            for i, element in enumerate(data[-self.epochs:]):
+                changes[i] = np.abs(element - data[-self.epochs+i+1])
+            if changes.sum() <= self.tolerance:
+                stop  = 1
+        return stop
+
 class Layer(abc.ABC):
     '''
     abstract class for each kind of different layer. Each layer must be able to do two things
@@ -846,7 +952,7 @@ class RegressorNetwork(NeuralNetwork):
                 excerpt = slice(start_idx, start_idx + batch_size)
             yield x[excerpt], y[excerpt]
     
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "l2", verbose:int = 0) -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "l2", score:str = "l2", callbacks:list = [], verbose:int = 0) -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -868,6 +974,7 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
                 - Mean squared logarithmic Error --> "mlse" 
+            - callbacks: list of Callback objects to use during training [List]
             - verbose: how detailed the train process shall be documented. Possible values are [Integer]
                 - 0 -> no information (default)
                 - 1 -> more detailed information
@@ -890,6 +997,8 @@ class RegressorNetwork(NeuralNetwork):
         ## init the bar to show the progress
         starttime = time.time()
         for e in range(epochs): 
+            ## init stopping argument
+            stop = 0
             ## get current time
             epochtime = time.time()
             ## go through batches
@@ -904,10 +1013,15 @@ class RegressorNetwork(NeuralNetwork):
             train_metrics.append(np.mean(loss_function(y_train, train_pred, score)))
             test_metrics.append(np.mean(loss_function(y_test, test_pred, score)))
             ## update progress of training
-            metrics = [train_loss, train_metrics, test_loss, test_metrics]
+            metrics = {"train_loss": train_loss, "train_metrics": train_metrics, "test_loss": test_loss, "test_metrics": test_metrics}
             params = [e, epochs, score, starttime, epochtime]
-            plot_progress(metrics, params, verbose)          
-            
+            plot_progress(metrics, params, verbose)     
+            for callback in callbacks:
+                stop += callback.evaluate(metrics)     
+            ## check whether stopping criterion is reached
+            if stop > 0:
+                print(f'training aborted due to {", ".join([callback.__name__() for callback in callbacks])}')
+                break       
     
     def predict_step(self, X_test:np.array) -> np.array:
         '''
@@ -1037,7 +1151,7 @@ class ClassifierNetwork(NeuralNetwork):
                 excerpt = slice(start_idx, start_idx + batch_size)
             yield x[excerpt], y[excerpt]
     
-    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "categorical-cross-entropy", score:str = "accuracy", verbose:int = 0) -> None:
+    def train(self, x:np.array, y:np.array, batch_size:int = 10, epochs:int = 100, loss_func:str = "categorical-cross-entropy", score:str = "accuracy", callbacks:list = [], verbose:int = 0) -> None:
         '''
         performs the training of the network for all steps (= epochs)
         Parameters:
@@ -1056,6 +1170,7 @@ class ClassifierNetwork(NeuralNetwork):
                 - Accuracy --> "accuracy" = default
                 - F1 --> "f1"
                 - balanced Accuracy --> "balanced_accuracy"
+            - callbacks: list of Callback objects to use during training [List]
             - verbose: how detailed the train process shall be documented. Possible values are [Integer]
                 - 0 -> no information (default)
                 - 1 -> more detailed information
@@ -1082,6 +1197,8 @@ class ClassifierNetwork(NeuralNetwork):
         ## init the bar to show the progress
         starttime = time.time()
         for e in range(epochs): 
+            ## init stopping argument
+            stop = 0
             ## get current time
             epochtime = time.time()
             ## go through batches
@@ -1096,9 +1213,15 @@ class ClassifierNetwork(NeuralNetwork):
             train_metrics.append(np.mean(classifier_score(np.argmax(y_train, axis=-1), np.argmax(train_pred, axis=-1), score)))
             test_metrics.append(np.mean(classifier_score(np.argmax(y_test, axis=-1), np.argmax(test_pred, axis=-1), score)))
             ## update progress of training
-            metrics = [train_loss, train_metrics, test_loss, test_metrics]
+            metrics = {"train_loss": train_loss, "train_metrics": train_metrics, "test_loss": test_loss, "test_metrics": test_metrics}
             params = [e, epochs, score, starttime, epochtime]
-            plot_progress(metrics, params, verbose)        
+            plot_progress(metrics, params, verbose)   
+            for callback in callbacks:
+                stop += callback.evaluate(metrics)     
+            ## check whether stopping criterion is reached
+            if stop > 0:
+                print(f'training aborted due to {", ".join([callback.__name__() for callback in callbacks])}')
+                break             
             
     
     def predict_step(self, X_test:np.array) -> np.array:
