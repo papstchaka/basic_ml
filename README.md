@@ -54,7 +54,7 @@ Algorithms with different work-wise:
 ## What's next:
 
 >   - working on the Deep Learning module:
->       - adding callbacks (EarlyStopping, Learning Rate Schedules - dynamic learning rate)
+>       - adding more callbacks (Learning Rate Schedules - dynamic learning rate)
 >   - go through all the algorithms and add further variety
 
 ## Supporting developers:
