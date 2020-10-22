@@ -52,7 +52,7 @@ class Callback(abc.ABC):
     abstract class for each kind of different callback
     '''
     
-    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-3, **kwargs) -> None:
+    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-2, **kwargs) -> None:
         '''
         force all layer to have an __init__ function to handle possible layer parameters
         Parameters:
@@ -101,7 +101,7 @@ class EarlyStopping(Callback):
     Callback that stops training procedure if model does not perform any (noteworthy) changes in given function
     '''
     
-    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-3, **kwargs) -> None:
+    def __init__(self, function:str, validation:bool = True, epochs:int = 10, tolerance:float = 1e-2, **kwargs) -> None:
         '''
         constructor of class
         Parameters:
@@ -149,7 +149,7 @@ class EarlyStopping(Callback):
             changes = np.ones((self.epochs))
             for i, element in enumerate(data[-self.epochs:]):
                 changes[i] = np.abs(element - data[-self.epochs+i+1])
-            if changes.sum() <= self.tolerance:
+            if changes.mean() <= self.tolerance:
                 stop  = 1
         return stop
 
