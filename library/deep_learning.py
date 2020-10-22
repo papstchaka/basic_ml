@@ -123,7 +123,7 @@ class Callback(abc.ABC):
                 count += 1
             else:
                 count = 0
-            if count >= self.epochs:
+            if count >= self.epochs - 1:
                 stop = 1
                 break
         return stop
