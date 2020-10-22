@@ -138,17 +138,23 @@ class EarlyStopping(Callback):
         Returns:
             - stop: whether (=0) or not (=1) to stop the training [Integer]
         '''
+        ## init stop criterion
         stop = 0
+        ## check whether choosen metric is available
         possible_metrics = [key.split("_")[1] for key in metrics.keys()]
         if self.function in possible_metrics:
             data = metrics[f'{self.validation}_{self.function}']
         else:
             print(f"this metric is not available! Using {list(metrics.keys())[0]} instead!")
             data = metrics[list(metrics.keys())[0]]
+        ## only perform callback if more than the desired number of epochs was actually already done
         if data.__len__() >= self.epochs:
+            ## init the changes
             changes = np.ones((self.epochs))
+            ## go through last 'epochs' elements of data
             for i, element in enumerate(data[-self.epochs:]):
                 changes[i] = np.abs(element - data[-self.epochs+i+1])
+            ## check if the mean of the changes is below tolerance
             if changes.mean() <= self.tolerance:
                 stop  = 1
         return stop
