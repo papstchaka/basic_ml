@@ -36,8 +36,8 @@ def plot_progress(metrics:dict, params:list, verbose) -> None:
         fig = plt.figure(figsize=(10,5))
         ax = fig.add_subplot()
         x = [i for i in range(train_loss.__len__())]
-        ax.plot(x,train_loss, label="train-loss")
-        ax.plot(x,test_loss, label="validation-loss")
+        ax.plot(x, train_loss, label="train-loss")
+        ax.plot(x, test_loss, label="validation-loss")
         ax.set_title(f'Epoch {e+1}/{epochs}\n{"=" * (progress)}>{"_"*int(1.5*(length-progress))}\nTrain-Loss: {train_loss[-1]:.4f}; Train-{score.upper()}: {train_metrics[-1]:.4f}; Test-Loss: {test_loss[-1]:.4f}; Test-{score.upper()}: {test_metrics[-1]:.4f}\nEstimated time: {convertSeconds(currenttime-starttime)}<{convertSeconds(epochtime*(epochs-e))}, {(1/epochtime):.2f}it/s', loc="left")
         plt.legend()
         plt.show()
