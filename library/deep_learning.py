@@ -903,10 +903,12 @@ class NeuralNetwork(abc.ABC):
                 - Mean absolute Error (Regression) --> "mae"
                 - Root mean squared Error (Regression) --> "rmse"
                 - Mean squared logarithmic Error (Regression) --> "mlse" 
+                - Huber (for Regression) --> "huber"
                 - Hinge (binary Classification) --> "hinge"
                 - Squared Hinge (binary Classification) --> "squared-hinge"
                 - Cross Entropy (binary Classification) --> "cross-entropy"
                 - Categorical Cross Entropy (Multi-class Classification) --> "categorical-cross-entropy"
+                - Kullback-Leibler Divergence (for multi-class classification) --> "kullback-leibler"
         Returns:
             - train_loss: trainings loss for current batch [Float]
         '''
@@ -1072,6 +1074,7 @@ class RegressorNetwork(NeuralNetwork):
                 - Mean absolute Error --> "mae"
                 - Root mean squared Error --> "rmse"
                 - Mean squared logarithmic Error --> "mlse" 
+                - Huber (for Regression) --> "huber"
             - score: mode of the scoring function. Possible values are [String]
                 - L1-norm Loss --> "l1"
                 - L2-norm Loss --> "l2", (default)
@@ -1272,6 +1275,7 @@ class ClassifierNetwork(NeuralNetwork):
                 - Squared Hinge (for binary classification) --> "squared-hinge"
                 - Cross Entropy (for binary classification) --> "cross-entropy"
                 - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy", (default)
+                - Kullback-Leibler Divergence (for multi-class classification) --> "kullback-leibler"
             - score: mode of the scoring function. Possible values are [String]
                 - Recall --> "recall"
                 - Precision --> "precision"
