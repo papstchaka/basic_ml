@@ -50,10 +50,12 @@ def loss_function(y_test:np.array, y_pred:np.array, mode:str = "l2", derivate:bo
             - Mean absolute Error (for Regression) --> "mae"
             - Root mean squared Error (for Regression) --> "rmse"
             - Mean squared logarithmic Error (for Regression) --> "mlse" 
+            - Huber (for Regression) --> "huber"
             - Hinge (for binary classification) --> "hinge"
             - Squared Hinge (for binary classification) --> "squared-hinge"
             - Cross Entropy (for binary classification) --> "cross-entropy"
             - Categorical Cross Entropy (for multi-class classification) --> "categorical-cross-entropy"
+            - Kullback-Leibler Divergence (for multi-class classification) --> "kullback-leibler"
         - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
     Returns:
         - loss: calculated loss [Float]
@@ -70,14 +72,18 @@ def loss_function(y_test:np.array, y_pred:np.array, mode:str = "l2", derivate:bo
         fx = lambda x,y: np.sqrt(np.sum(( x - y )**2, axis=-1 ) / x.__len__())
     elif mode == "msle": ## regression
         fx = lambda x,y: np.sum( (np.log(x+1) - np.log(y+1))**2 , axis=-1) / x.__len__()
+    elif mode == "huber": ## regression
+        fx = lambda x,y: np.where(np.abs(x-y) < 1.0,0.5*(x-y)**2 , np.abs(x-y)-0.5) * 1.0 / x.__len__()
     elif mode == "hinge": ## binary classification
-        fx = lambda x,y: np.sum(np.where((1 - x*y) <= 0, 0.0, 1.0) * (1 - x*y)) / x.__len__()
+        fx = lambda x,y: np.sum(np.where((1 - np.clip(x, 1e-7, 1-1e-7)*np.clip(y, 1e-7, 1-1e-7)) <= 0, 0.0, 1.0) * (1 - np.clip(x, 1e-7, 1-1e-7)*np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
     elif mode == "squared-hinge": ## binary classification
-        fx = lambda x,y: np.sum((np.where((1 - x*y) <= 0, 0.0, 1.0) * (1 - x*y) )**2) / x.__len__()
+        fx = lambda x,y: np.sum((np.where((1 - np.clip(x, 1e-7, 1-1e-7)*np.clip(y, 1e-7, 1-1e-7)) <= 0, 0.0, 1.0) * (1 - np.clip(x, 1e-7, 1-1e-7)*np.clip(y, 1e-7, 1-1e-7)) )**2) / x.__len__()
     elif mode == "cross-entropy": ## binary classification
-        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7)) + (1-x) * np.log(np.clip(1-y, 1e-7, 1-1e-7))) / x.__len__()
+        fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7)) + (1-x) * np.log(1 - np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
     elif mode == "categorical-cross-entropy": ## multi-class classifaction
         fx = lambda x,y: - np.sum(x * np.log(np.clip(y, 1e-7, 1-1e-7))) / x.__len__()
+    elif mode == "kullback-leibler": ## multi-class classification
+        fx = lambda x,y: np.sum(y * np.log( np.clip(y, 1e-7, 1-1e-7) / np.clip(x, 1e-7, 1-1e-7) )) / x.__len__()
     else:
         print('Unknown loss function. L2 is used')
         fx = lambda x,y: np.sum(( x - y )**2, axis=-1 )
