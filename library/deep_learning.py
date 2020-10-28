@@ -14,7 +14,7 @@ from .metrics import get_activation_function, loss_function, classifier_score
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
-def plot_progress(metrics:dict, params:list, verbose) -> None:
+def plot_progress(metrics:dict, params:list, verbose:int) -> None:
     '''
     plots current loss curves and prints progress
     Parameters:
