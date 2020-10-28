@@ -53,8 +53,7 @@ Algorithms with different work-wise:
 
 ## What's next:
 
->   - working on the Deep Learning module:
->       - adding more callbacks (Learning Rate Schedules - dynamic learning rate)
+>   - working on the Deep Learning module
 >   - go through all the algorithms and add further variety
 
 ## Supporting developers:
