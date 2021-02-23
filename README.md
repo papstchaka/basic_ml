@@ -128,7 +128,7 @@ Algorithms that work exactly as describe above, respectively in their sklearn do
 - Deep Learning using Neural Networks - has its one `score()` function as being the `loss()` function in training. Workwise/Usage in the same way as <a href=https://www.tensorflow.org/ target="_blank">`Tensorflow Implementation`</a> 
 
 Algorithms with different work-wise:
-- Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train()` function implemented, since the user is obliged to self-decide whether or not to use `Q-Learning` or `Action-Value-Iteration`.
+- Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train()` function implemented, since the user is obliged to self-decide whether or not to use <a href="https://en.wikipedia.org/wiki/Q-learning" target="_blank">`Q-Learning`</a> or <a href="https://towardsdatascience.com/the-value-iteration-algorithm-4714f113f7c5" target="_blank">`Action-Value-Iteration`</a>.
 - Hidden Markov Models --> as they need a sequence to be trained and initial states and observations, the class is used slightly different to `sklearn`-typical work wise. You have to provide a sequence to all of the implemented algorithms, further instructions can be found on top of the class description in the <a href="library/reinforcement_learning/hmm.py" target="_blank">`hmm.py`</a> script.
 - Genetic Algorithm for DataSet manipulation --> since there is no prediction in the workwise of GA, there is no such function implemented. The `train()` function gives back the best 'subdataset' that exists (in the original dataset or mutated from that)
 
