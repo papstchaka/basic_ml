@@ -13,17 +13,18 @@ Only used libraries are:
 which can be installed via
 >       `pip install numpy scipy plotly tqdm autograd jupyterlab`
 
-## Scripts:
-The implemented algorithms are splitted into three parts, given by the three different scripts in `library`:
->   - <a href="library/classic_ml.py" target="_blank">`classic_ml.py`</a> contains all "classic" Machine Learning algorithms excluding Reinforcement Learning and Deep Learning
->   - <a href="library/reinforcement_learning.py" target="_blank">`reinforcement_learning.py`</a> contains Reinforcement Learning algorithms
->   - <a href="library/deep_learning.py" target="_blank">`deep_learning.py`</a> contains Deep Learning using Neural Networks
->   - <a href="library/genetic_algorithm.py" target="_blank">`genetic_algorithm.py`</a> containing a genetic algorithm implementation for DataSet manipulation
->   - <a href="library/_helper.py" target="_blank">`_helper.py`</a> containing abstract classes as support for the other algorithms - for example implementing the `score()` function for all classifiers and regressors
->   - <a href="library/preprocessing.py" target="_blank">`preprocessing.py`</a> containing classes and functions for data preprocessing (MinMaxScaler, train_test_split)
->   - <a href="library/metrics.py" target="_blank">`metrics.py`</a> containing several loss-/activation-functions (for deep_learning) and the metrics for `score()`-evaluation
+## Project structure:
 
-## Functionalities that are already implemented (state of 12.10.2020):
+The project is structured as follows:
+
+>   - <a href="library/" target="_blank">`library/`</a> - containing the respective scripts for all subtasks:
+>       - <a href="library/classic_learning/" target="_blank">`classic_learning/`</a> - contains all `classic` Machine Learning algorithms
+>       - <a href="library/deep_learning/" target="_blank">`deep_learning/`</a> - contains Deep Learning using Neural Networks
+>       - <a href="library/reinforcement_learning/" target="_blank">`reinforcement_learning/`</a> - contains Reinforcement Learning algorithms
+>       - <a href="library/utils/" target="_blank">`utils/`</a> - contains different kind of `helper` functions and classes
+>   - <a href="Test.ipynb" target="_blank">`Test.ipynb`</a> - a `Jupyter Notebook` containing a test implementation of all provided functionality
+
+## Functionalities that are already implemented (state of 23.02.2021):
 >   - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
 >   - Clustering <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
 >   - Dimension Reduction Algorithms (LDA, PCA and ICA) <a href="https://scikit-learn.org/stable/modules/unsupervised_reduction.html" target="_blank">`Dimension Reduction by sklearn`</a>
@@ -48,7 +49,7 @@ Algorithms that work exactly as describe above, respectively in their sklearn do
 
 Algorithms with different work-wise:
 >   - Reinforcement Learning --> since there is no prediction in the workwise of RL, there is no such function implemented. Furthermore there is no (or not yet) `train()` function implemented, since the user is obliged to self-decide whether or not to use `Q-Learning` or `Action-Value-Iteration`.
->   - Hidden Markov Models --> as they need a sequence to be trained and initial states and observations, the class is used slightly different to `sklearn`-typical work wise. You have to provide a sequence to all of the implemented algorithms, further instructions can be found on top of the class description in the <a href="library/reinforcement_learning.py" target="_blank">`reinforcement_learning.py`</a> script.
+>   - Hidden Markov Models --> as they need a sequence to be trained and initial states and observations, the class is used slightly different to `sklearn`-typical work wise. You have to provide a sequence to all of the implemented algorithms, further instructions can be found on top of the class description in the <a href="library/reinforcement_learning/hmm.py" target="_blank">`hmm.py`</a> script.
 >   - Genetic Algorithm for DataSet manipulation --> since there is no prediction in the workwise of GA, there is no such function implemented. The `train()` function gives back the best 'subdataset' that exists (in the original dataset or mutated from that)
 
 ## What's next:
