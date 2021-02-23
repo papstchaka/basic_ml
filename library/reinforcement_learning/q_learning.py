@@ -3,8 +3,8 @@ class that implements reinforcement learning using Q Learning algorithm
 The implemented algorithms can be trained to find a policy for finding the optimal way through the following two tasks
     - [1, -1, -1, 10] which should lead to point in the direction of the 10 [1D]
     - [0, 0, 0, 1  ]
-        [0, x, 0, -10] -> which should lead to point in the direction of the 1 [2D]
-        [0, 0, 0, 0  ]
+      [0, x, 0, -10] -> which should lead to point in the direction of the 1 [2D]
+      [0, 0, 0, 0  ]
 '''
 
 ## Imports
