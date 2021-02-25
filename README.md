@@ -63,11 +63,6 @@ The project is structured as follows:
 <br/><br/>
 
 - <a href="library/classic_learning/" target="_blank">`classic_learning`</a>
-  - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
-  <h2 align="center">
-    <img src="assets/linear_regression.png" alt="Linear Regression" width="400px" />
-  </h2>
-
   - Clustering <a href="https://scikit-learn.org/stable/modules/clustering.html" target="_blank">`Clustering by sklearn`</a>
   <h2 align="center">
     <img src="assets/clustering.png" alt="Clustering" width="400px" />
@@ -88,23 +83,9 @@ The project is structured as follows:
     <img src="assets/gp.png" alt="GP" width="400px" />
   </h2>
 
-<br/><br/>
-
-- <a href="library/reinforcement_learning/" target="_blank">`reinforcement_learning`</a> - see in general: <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
-  - Action Value Iteration for Reinforcement Learning - <a href="https://github.com/dennybritz/reinforcement-learning/tree/master/DP" target="_blank">`Action Value Iteration by Denny Britz & Co`</a>
-  - Q-Learning for Reinforcement Learning - <a href="https://github.com/dennybritz/reinforcement-learning/tree/master/DQN" target="_blank">`Q-Learning by Denny Britz & Co`</a>
+  - Linear Regression (with single- and multi-dimensional data support) <a href="https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html" target="_blank">`Linear Regression by sklearn`</a>
   <h2 align="center">
-    <img src="assets/reinforcement_learning.png" alt="Reinforcement Learning" width="400px" />
-  </h2>
-
-  - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
-  <h2 align="center">
-    <img src="assets/hmm.png" alt="HMM" width="400px" />
-  </h2>
-
-  - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
-  <h2 align="center">
-    <img src="assets/genetic_algorithm.jpg" alt="genetic_algorithm" width="400px" />
+    <img src="assets/linear_regression.png" alt="Linear Regression" width="400px" />
   </h2>
 
 <br/><br/>
@@ -117,12 +98,30 @@ The project is structured as follows:
 
 <br/><br/>
 
+- <a href="library/reinforcement_learning/" target="_blank">`reinforcement_learning`</a> - see in general: <a href="https://pythonprogramming.net/q-learning-reinforcement-learning-python-tutorial/" target="_blank">`Reinforcement Learning Tutorial by PythonProgramming`</a>
+  - Action Value Iteration for Reinforcement Learning - <a href="https://github.com/dennybritz/reinforcement-learning/tree/master/DP" target="_blank">`Action Value Iteration by Denny Britz & Co`</a>
+  - Q-Learning for Reinforcement Learning - <a href="https://github.com/dennybritz/reinforcement-learning/tree/master/DQN" target="_blank">`Q-Learning by Denny Britz & Co`</a>
+  <h2 align="center">
+    <img src="assets/reinforcement_learning.png" alt="Reinforcement Learning" width="400px" />
+  </h2>
+
+  - Genetic Algorithm for DataSet manipulation <a href=https://pypi.org/project/sklearn-genetic/ target="_blank">`Genetic algorithm by sklearn`</a>
+  <h2 align="center">
+    <img src="assets/genetic_algorithm.jpg" alt="genetic_algorithm" width="400px" />
+  </h2>
+
+  - Hidden Markov Models <a href="http://scikit-learn.sourceforge.net/stable/modules/hmm.html" target="_blank">`HMM by sklearn`</a>
+  <h2 align="center">
+    <img src="assets/hmm.png" alt="HMM" width="400px" />
+  </h2>
+
+<br/><br/>
+
 - <a href="library/utils/" target="_blank">`utils`</a>
   - Data Preprocessing for DataSet manipulation (containing a MinMaxScaler and a train_test_split()-function) <a href=https://scikit-learn.org/stable/modules/preprocessing.html target="_blank">`Preprocessing by sklearn`</a>
   <h2 align="center">
     <img src="assets/preprocessing.jpg" alt="preprocessing" width="400px" />
   </h2>
-
 
 <br/><br/>
 
