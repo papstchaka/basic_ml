@@ -21,6 +21,13 @@ Clustering graphic
 <br/><br/>
 
 -------
+## <a href="gaussian_shape.png" target="_blank">`gaussian_shape.png`</a>
+
+Graphic showing a `gaussian distribution` in `3D`
+
+<br/><br/>
+
+-------
 
 ## <a href="genetic_algorithm.jpg" target="_blank">`genetic_algorithm.jpg`</a>
 
