@@ -93,6 +93,30 @@ Data Proprecessing graphic
 
 -------
 
+## <a href="reinforcement_learning.jpg" target="_blank">`reinforcement_learning.jpg`</a>
+
+Reinforcement Learning graphic
+
+<br/><br/>
+
+-------
+
 ## <a href="reinforcement_learning.png" target="_blank">`reinforcement_learning.png`</a>
 
 Reinforcement Learning graphic
+
+<br/><br/>
+
+-------
+
+## <a href="types_classic_learning.jpg" target="_blank">`types_classic_learning.jpg`</a>
+
+Different kinds of classical ML algorithms
+
+<br/><br/>
+
+-------
+
+## <a href="types_neural_networks.jpg" target="_blank">`types_neural_networks.jpg`</a>
+
+Different kinds of possible neural networks
