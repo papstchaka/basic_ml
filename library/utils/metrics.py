@@ -15,6 +15,7 @@ def get_activation_function(mode:str = "sigmoid", derivate:bool = False) -> obje
             - Tangens hyperbolicus --> "tanh"
             - Rectified Linear Unit --> "relu"
             - Leaky Rectified Linear Unit --> "leaky-relu"
+            - Soft-max --> "softmax"
         - derivate: whether (=True, default) or not (=False) to return the derivated value of given function and x [Boolean]
     Returns:
         - y: desired activation function [object]
