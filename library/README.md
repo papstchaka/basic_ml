@@ -10,6 +10,10 @@ contains the respective scripts for all subtasks
 
 contains all `classic` Machine Learning algorithms
 
+<h2 align="center">
+    <img src="../assets/types_classic_learning.jpg" alt="Types of classical ML methods" width="400px" />
+</h2> 
+
 <br/><br/>
 
 -------
@@ -18,6 +22,10 @@ contains all `classic` Machine Learning algorithms
 
 contains Deep Learning using Neural Networks
 
+<h2 align="center">
+    <img src="../assets/types_neural_networks.jpg" alt="Types of nerual networks" width="400px" />
+</h2> 
+
 <br/><br/>
 
 -------
@@ -25,6 +33,10 @@ contains Deep Learning using Neural Networks
 ## <a href="reinforcement_learning/" target="_blank">`reinforcement_learning/`</a>
 
 contains Reinforcement Learning algorithms
+
+<h2 align="center">
+    <img src="../assets/reinforcement_learning.jpg" alt="Reinforcement Learning" width="400px" />
+</h2> 
 
 <br/><br/>
 
